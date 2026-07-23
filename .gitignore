@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+*.jks
+keystore.properties
+volumetap_log.txt
+.kotlin/
+temp_data/

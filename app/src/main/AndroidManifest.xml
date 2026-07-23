@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- INTERNET は要求しない（設計書 §12）。広告・トラッキングを技術的に不可能にする。 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!--
+      「有効にするアプリ」の一覧に必要な可視性。
+      QUERY_ALL_PACKAGES は使わない（Play の審査で説明が要る強い権限であり、
+      ランチャー起動可能なアプリだけ見えれば足りるため）。
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VolumeTap">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.AboutActivity"
+            android:exported="false"
+            android:label="@string/about" />
+
+        <activity
+            android:name=".ui.LicensesActivity"
+            android:exported="false"
+            android:label="@string/licenses" />
+
+        <activity
+            android:name=".ui.AppPickerActivity"
+            android:exported="false"
+            android:label="@string/enabled_apps" />
+
+        <activity
+            android:name=".ui.PickPointActivity"
+            android:exported="false"
+            android:theme="@style/Theme.VolumeTap.Pick" />
+
+        <service
+            android:name=".service.VolumeTapService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+        <service
+            android:name=".service.VolumeTapTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

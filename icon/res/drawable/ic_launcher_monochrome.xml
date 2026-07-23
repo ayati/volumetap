@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  volumetap モノクロレイヤー（Android 13+ テーマアイコン）
+  108dp ビューポート。内容は中央 66dp のセーフゾーン円に収まる。
+  前景レイヤーと同一形状。色はシステムがテーマに合わせて置き換える。
+  グリフが単色ベタなので、前景をそのまま流用できる。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ボリュームロッカー -->
+    <path
+        android:pathData="M37,33 A8,8 0 0 1 45,41 L45,67 A8,8 0 0 1 37,75 A8,8 0 0 1 29,67 L29,41 A8,8 0 0 1 37,33 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.4" />
+
+    <!-- スマートフォン -->
+    <path
+        android:pathData="M60.5,35 L75.5,35 A3.5,3.5 0 0 1 79,38.5 L79,69.5 A3.5,3.5 0 0 1 75.5,73 L60.5,73 A3.5,3.5 0 0 1 57,69.5 L57,38.5 A3.5,3.5 0 0 1 60.5,35 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.4" />
+
+    <!-- ＋ -->
+    <path
+        android:pathData="M33,42.5 L41,42.5 M37,38.5 L37,46.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round" />
+
+    <!-- − -->
+    <path
+        android:pathData="M33,65.5 L41,65.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round" />
+
+    <!-- ロッカー中央のドット -->
+    <path
+        android:pathData="M32.8,54 A4.2,4.2 0 1 0 41.2,54 A4.2,4.2 0 1 0 32.8,54 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- 接続線 -->
+    <path
+        android:pathData="M40,54 L61.4,54"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round" />
+
+    <!-- タップ波紋 -->
+    <path
+        android:pathData="M61.4,54 A6.6,6.6 0 1 0 74.6,54 A6.6,6.6 0 1 0 61.4,54 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3" />
+    <path
+        android:pathData="M65.4,54 A2.6,2.6 0 1 0 70.6,54 A2.6,2.6 0 1 0 65.4,54 Z"
+        android:fillColor="#FFFFFF" />
+</vector>

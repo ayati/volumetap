@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  canRequestFilterKeyEvents（能力の宣言）と
+  accessibilityFlags="flagRequestFilterKeyEvents"（有効化フラグ）は両方必要。
+  片方だけでは onKeyEvent() が一度も呼ばれず、エラーも警告も出ない。
+
+  canRetrieveWindowContent は意図的に宣言しない（設計書 §4.1）。
+  本アプリは画面に表示されている内容を一切読み取れない。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRequestFilterKeyEvents"
+    android:canPerformGestures="true"
+    android:canRequestFilterKeyEvents="true"
+    android:description="@string/accessibility_service_description"
+    android:isAccessibilityTool="true"
+    android:notificationTimeout="100"
+    android:summary="@string/accessibility_service_summary" />

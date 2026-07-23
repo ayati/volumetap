@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 背景レイヤーは単色ベタ。円は描かない（マスク形状はランチャー依存のため）。 -->
+    <color name="ic_launcher_background">#1E88D8</color>
+</resources>
