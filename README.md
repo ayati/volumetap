@@ -88,6 +88,9 @@ yomikake ではなく **Chrome などのブラウザ**を選んでください�
 ./make_release_key.sh              # 初回のみ。署名鍵を作成する
 ./gradlew :app:assembleRelease     # 署名済み APK
 ./verify_release.sh                # リリース前チェック
+
+./gradlew :app:bundleRelease       # Play 用の AAB
+./verify_bundle.sh                 # AAB の検証（bundletool が必要）
 ```
 
 ⚠️ 署名鍵は一度作ったら変更できません。変えると配布済み APK からの上書き更新が

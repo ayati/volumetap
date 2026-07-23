@@ -615,7 +615,7 @@ README と設定画面に明記する。
 | **3** ✅完了 | 設定画面（Compose）、DataStore 永続化、このアプリについて | 設定が再起動後も保持される ← 2026-07-23 実機確認済 |
 | **4** ✅完了 | 誤爆防止（アプリ絞り込み、QS タイル、触覚） | 他アプリで暴発しない ← 2026-07-23 実機確認済 |
 | **5** ✅完了 | アイコン、README、ライセンス画面、署名、リリース検証スクリプト | 署名済み APK を実機確認済（2026-07-23）← 公開作業のみ |
-| **6** | Play Console 登録、クローズドテスト | 製品版公開 |
+| **6** 🔄進行中 | Play Console 登録（済）、AAB 作成（済）、クローズドテスト | 製品版公開 |
 
 Phase 1 の完了条件を「音量が壊れないこと」に置いているのは、ここが最大の
 体験リスクだから。キーを横取りしたまま音量が効かなくなる状態は、
@@ -632,7 +632,45 @@ Phase 1 の完了条件を「音量が壊れないこと」に置いているの
 
 ### 11.2 第二段階: Google Play
 
-準備物:
+#### ⚠️ アプリ署名鍵の選択（最初のアップロード時・やり直せない）
+
+野良配布した APK は `volumetap-release.jks` で署名している。Play へ最初に
+AAB をアップロードするとき、**Play App Signing のアプリ署名鍵をどうするかを
+選ぶことになる。ここが分岐点。**
+
+| 選択 | 結果 |
+|---|---|
+| **既存の鍵を Play にアップロード**（PEPK ツールで書き出す） | Play 配信版と野良版の署名が一致する。**野良版の利用者がそのまま Play 版へ更新できる** |
+| Google に新しい鍵を生成させる（既定） | 署名が変わる。**野良版の利用者は一度アンインストールしないと Play 版を入れられず、設定が消える** |
+
+**本プロジェクトは前者を選ぶ。** 野良配布でテスターを集めてから Play に移す
+という段取りである以上、そのテスターが更新できなくなるのは本末転倒。
+
+手順は Play Console の「アプリの署名」画面から PEPK ツールを入手し、
+`volumetap-release.jks` を暗号化して書き出してアップロードする。
+PEPK に渡す暗号化キーは Play Console の画面に表示されるアカウント固有の値なので、
+この作業は Console 上でしか始められない。
+
+アップロード鍵は引き続き `volumetap-release.jks`（＝アプリ署名鍵と同一）になる。
+
+#### AAB の作成と検証
+
+```bash
+./gradlew :app:bundleRelease   # app/build/outputs/bundle/release/app-release.aab
+./verify_bundle.sh             # 署名・権限・同梱リソースを検証
+```
+
+AAB のままでは権限やリソースを直接読めないため、`verify_bundle.sh` は
+bundletool で「Play が実際に配信する APK」を生成してから中身を確認する。
+AAB に入っているものが配信物に残っているとは限らないので、この確認が要る。
+
+同梱されるネイティブライブラリは 2 つ。いずれも AOSP の Apache-2.0 で、
+`THIRD_PARTY_LIBRARIES` の AndroidX / Compose の記載に含まれる。
+
+- `libandroidx.graphics.path.so`（Compose UI の推移的依存）
+- `libdatastore_shared_counter.so`（DataStore）
+
+#### 準備物:
 
 - [x] プライバシーポリシー URL — https://www.ayati.com/privacy.html
 - [ ] Developer アカウント（$25、本人確認あり）
