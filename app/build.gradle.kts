@@ -47,6 +47,12 @@ android {
         release {
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
+            // 自前のネイティブコードは無いが、AndroidX の推移的依存で .so が同梱される
+            // （libandroidx.graphics.path.so / libdatastore_shared_counter.so）。
+            // なお現時点でこれらは配布元で既にシンボル削除済みのため抽出結果は空になり、
+            // Play の「デバッグシンボルがありません」警告は解消できない。
+            // 将来シンボル付きで配布されたときに自動で効くよう設定だけ残す。
+            ndk { debugSymbolLevel = "SYMBOL_TABLE" }
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
