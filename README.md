@@ -114,7 +114,8 @@ f3d9d749857baa6b402f09c475a6c679fcb861bb2bb447430aae4c340bf37d40
 ./collect_log.sh                   # 動作ログを volumetap_log.txt に記録
 ```
 
-設計の詳細は [design.md](design.md)、アイコンは [icon/README.md](icon/README.md) を参照。
+設計の詳細は [design.md](design.md)、変更履歴は [CHANGELOG.md](CHANGELOG.md)、
+アイコンは [icon/README.md](icon/README.md) を参照。
 
 ## コントリビューション
 
