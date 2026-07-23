@@ -12,6 +12,8 @@ captures/
 *.keystore
 *.jks
 keystore.properties
+upload_key.zip
+pepk.jar
 volumetap_log.txt
 .kotlin/
 temp_data/
