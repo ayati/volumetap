@@ -1,6 +1,11 @@
 package com.ayati.volumetap.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.AudioManager
 import android.os.Build
@@ -13,6 +18,7 @@ import android.os.VibratorManager
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import androidx.core.content.ContextCompat
 import com.ayati.volumetap.data.AppSettings
 import com.ayati.volumetap.data.KeyAction
 import com.ayati.volumetap.data.ScreenOrientation
@@ -23,6 +29,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ボリュームキーを横取りする [AccessibilityService]（設計書 §4.1）。
@@ -49,6 +56,15 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
     /** 前面アプリの追跡。誤爆防止にのみ使う（画面内容は読まない）。 */
     private val foreground = ForegroundTracker()
 
+    /**
+     * アプリのインストール・削除・更新を受けて、ランチャー起動可能なアプリの
+     * 一覧を取り直す。取り直さないと、サービス起動後に入れたアプリが
+     * オーバーレイ扱いのまま無視され続ける。
+     */
+    private val packageChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) = refreshLaunchablePackages()
+    }
+
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(AudioManager::class.java)
@@ -57,6 +73,57 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         vibrator = resolveVibrator()
         scope.launch {
             SettingsRepository(this@VolumeTapService).settings.collectLatest { settings = it }
+        }
+
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            // ランチャーアイコンの有効・無効の切り替えもここに来る。
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
+            addDataScheme("package")
+        }
+        // 受け取るのはシステムからのブロードキャストだけなので NOT_EXPORTED。
+        // targetSdk 34 以降はフラグの明示が必要（ACTION_PACKAGE_* は
+        // protected-broadcast なので免除される条件だが、依存すべきでない）。
+        //
+        // 万一失敗してもサービスごと落とさない。登録できない場合の影響は
+        // 「サービス起動後に入れたアプリが次の起動まで一覧に反映されない」だけ。
+        runCatching {
+            ContextCompat.registerReceiver(
+                this,
+                packageChangeReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+        }.onFailure { Log.w(TAG, "failed to watch package changes", it) }
+        refreshLaunchablePackages()
+    }
+
+    /**
+     * ランチャーから起動できるアプリを列挙して [ForegroundTracker] に渡す
+     * （設計書 §5.4「透過オーバーレイを前面アプリと誤認しない」）。
+     *
+     * `QUERY_ALL_PACKAGES` は使わない。マニフェストの `<queries>` で
+     * ランチャー起動可能なアプリだけに可視性を絞ってあり、アプリ絞り込み画面の
+     * 一覧と同じ範囲になる。
+     */
+    private fun refreshLaunchablePackages() {
+        scope.launch {
+            val packages: Set<String> = withContext(Dispatchers.IO) {
+                val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                try {
+                    packageManager
+                        .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+                        .mapTo(HashSet()) { it.activityInfo.packageName }
+                } catch (e: RuntimeException) {
+                    // 取得できなければ絞り込みを諦める（従来どおり全パッケージを追う）。
+                    Log.w(TAG, "failed to list launchable packages", e)
+                    emptySet()
+                }
+            }
+            foreground.setLaunchablePackages(packages)
+            Log.i(TAG, "launchable packages: ${packages.size}")
         }
     }
 
@@ -93,13 +160,14 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
 
     override fun onInterrupt() = Unit
 
-    override fun onUnbind(intent: android.content.Intent?): Boolean {
+    override fun onUnbind(intent: Intent?): Boolean {
         // PENDING を抱えたまま停止するとキーを消費した記録だけが残る（設計書 §5.1）。
         arbiter.reset()
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(packageChangeReceiver) }
         arbiter.reset()
         foreground.reset()
         scope.cancel()
