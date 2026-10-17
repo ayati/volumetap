@@ -18,6 +18,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
+import com.ayati.volumetap.BuildConfig
 import com.ayati.volumetap.data.AppSettings
 import com.ayati.volumetap.data.ScreenOrientation
 import com.ayati.volumetap.data.SettingsRepository
@@ -63,6 +64,14 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         override fun onReceive(context: Context?, intent: Intent?) = refreshLaunchablePackages()
     }
 
+    /** Phase 2-0 のスパイク用（[OverlaySpike]）。デバッグビルドでのみ登録する。 */
+    private var overlaySpike: OverlaySpike? = null
+    private val spikeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let { overlaySpike?.handle(it) }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(AudioManager::class.java)
@@ -96,6 +105,17 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
             )
         }.onFailure { Log.w(TAG, "failed to watch package changes", it) }
         refreshLaunchablePackages()
+
+        if (BuildConfig.DEBUG) {
+            overlaySpike = OverlaySpike(this)
+            // adb shell am broadcast から届くよう EXPORTED にする。リリースビルドには入らない。
+            ContextCompat.registerReceiver(
+                this,
+                spikeReceiver,
+                IntentFilter(OverlaySpike.ACTION),
+                ContextCompat.RECEIVER_EXPORTED,
+            )
+        }
     }
 
     /**
@@ -152,6 +172,7 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
      * 発火頻度が高いため、1 イベントごとの出力はしない。
      */
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        overlaySpike?.onEvent(event.eventType, event.packageName?.toString())
         if (foreground.onEvent(event.packageName?.toString())) {
             Log.i(TAG, "foreground -> ${foreground.current}")
         }
@@ -168,6 +189,8 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
 
     override fun onDestroy() {
         runCatching { unregisterReceiver(packageChangeReceiver) }
+        if (BuildConfig.DEBUG) runCatching { unregisterReceiver(spikeReceiver) }
+        overlaySpike?.reset()
         arbiter.reset()
         foreground.reset()
         scope.cancel()
