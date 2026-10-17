@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.AudioManager
 import android.os.Build
@@ -114,7 +113,8 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
                 val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                 try {
                     packageManager
-                        .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+                        // MATCH_DEFAULT_ONLY は付けない（AppPickerActivity と同じ理由）。
+                        .queryIntentActivities(intent, 0)
                         .mapTo(HashSet()) { it.activityInfo.packageName }
                 } catch (e: RuntimeException) {
                     // 取得できなければ絞り込みを諦める（従来どおり全パッケージを追う）。

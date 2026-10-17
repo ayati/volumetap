@@ -1,7 +1,6 @@
 package com.ayati.volumetap.ui
 
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -100,7 +99,9 @@ class AppPickerActivity : ComponentActivity() {
     private suspend fun loadInstalledApps(): List<InstalledApp> = withContext(Dispatchers.IO) {
         val pm = packageManager
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        // MATCH_DEFAULT_ONLY を付けると CATEGORY_DEFAULT を持たないランチャー項目
+        // （Poweramp など多数）が落ちる。ランチャー自身と同じく flags は 0 で引く。
+        pm.queryIntentActivities(intent, 0)
             .asSequence()
             .map { it.activityInfo.applicationInfo }
             .filter { it.packageName != packageName }
