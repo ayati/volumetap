@@ -18,9 +18,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
-import com.ayati.volumetap.BuildConfig
 import com.ayati.volumetap.data.AppSettings
-import com.ayati.volumetap.data.KeyAction
 import com.ayati.volumetap.data.ScreenOrientation
 import com.ayati.volumetap.data.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
@@ -65,19 +63,6 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         override fun onReceive(context: Context?, intent: Intent?) = refreshLaunchablePackages()
     }
 
-    /** スパイク用（[DragSpike]）。デバッグビルドでのみ登録する。 */
-    private val spikeReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            intent ?: return
-            DragSpike.apply(intent)
-            Log.i(TAG, DragSpike.describe())
-            when (intent.getStringExtra("fire")) {
-                "forward" -> DragSpike.drag(gestures, VolumeKey.DOWN)
-                "back" -> DragSpike.drag(gestures, VolumeKey.UP)
-            }
-        }
-    }
-
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(AudioManager::class.java)
@@ -111,16 +96,6 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
             )
         }.onFailure { Log.w(TAG, "failed to watch package changes", it) }
         refreshLaunchablePackages()
-
-        if (BuildConfig.DEBUG) {
-            // adb shell am broadcast から届くよう EXPORTED にする。リリースビルドには入らない。
-            ContextCompat.registerReceiver(
-                this,
-                spikeReceiver,
-                IntentFilter(DragSpike.ACTION),
-                ContextCompat.RECEIVER_EXPORTED,
-            )
-        }
     }
 
     /**
@@ -128,7 +103,7 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
      * （設計書 §5.4「透過オーバーレイを前面アプリと誤認しない」）。
      *
      * `QUERY_ALL_PACKAGES` は使わない。マニフェストの `<queries>` で
-     * ランチャー起動可能なアプリだけに可視性を絞ってあり、アプリ絞り込み画面の
+     * ランチャー起動可能なアプリだけに可視性を絞ってあり、アプリを追加する画面の
      * 一覧と同じ範囲になる。
      */
     private fun refreshLaunchablePackages() {
@@ -187,12 +162,12 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
     override fun onUnbind(intent: Intent?): Boolean {
         // PENDING を抱えたまま停止するとキーを消費した記録だけが残る（設計書 §5.1）。
         arbiter.reset()
+        gestures.reset()
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
         runCatching { unregisterReceiver(packageChangeReceiver) }
-        if (BuildConfig.DEBUG) runCatching { unregisterReceiver(spikeReceiver) }
         arbiter.reset()
         foreground.reset()
         scope.cancel()
@@ -201,46 +176,33 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
 
     // --- ArbiterHost -------------------------------------------------------
 
-    /** 設計書 §5.1「介入しない条件」。1 つでも該当すれば素通しする。 */
-    override fun shouldIntercept(key: VolumeKey): Boolean {
-        val s = settings
-        // クイック設定タイルからの一時停止。最優先で素通しする。
-        if (s.paused) return false
-        val spike = BuildConfig.DEBUG && DragSpike.enabled
-        if (!spike && s.actionFor(key) != KeyAction.TAP) return false
-
-        // 自アプリの設定画面・座標登録画面では介入しない。
-        val front = foreground.current
-        if (front == packageName) return false
-
-        // アプリ絞り込みが設定されていれば、対象外のアプリでは介入しない。
-        val allowed = s.enabledPackages
-        if (allowed.isNotEmpty() && front !in allowed) return false
-
-        if (spike) return true
-
-        // 「TAP に設定したが座標が未登録」で音量まで効かなくなる状態を作らない。
-        return s.tapPointFor(key, currentOrientation()) != null
-    }
+    /** design-pageturn.md §6.2「介入する条件」。実行できない送り方式は素通しする。 */
+    override fun shouldIntercept(key: VolumeKey): Boolean = resolve(key) != null
 
     override fun longPressMs(): Long = settings.longPressMs.toLong()
 
     override fun onShortPress(key: VolumeKey) {
-        if (BuildConfig.DEBUG && DragSpike.enabled) {
-            if (DragSpike.drag(gestures, key) && settings.hapticFeedback) performHapticFeedback()
-            return
-        }
         // shouldIntercept を通っている以上ここで null にはならないが、
-        // 押下中に設定が変わる可能性があるので取り直して確認する。
-        val point = settings.tapPointFor(key, currentOrientation())
-        if (point == null) {
-            Log.w(TAG, "short press: $key but tap point disappeared")
+        // 押下中に設定や前面アプリが変わる可能性があるので取り直して確認する。
+        val action = resolve(key)
+        if (action == null) {
+            Log.w(TAG, "short press: $key but nothing to do anymore")
             return
         }
-        if (gestures.tap(point.ratioX, point.ratioY) && settings.hapticFeedback) {
-            performHapticFeedback()
+        val dispatched = when (action) {
+            is ResolvedAction.Tap -> gestures.tap(action.x, action.y)
+            is ResolvedAction.Drag -> gestures.drag(action.fromX, action.fromY, action.toX, action.toY)
         }
+        if (dispatched && settings.hapticFeedback) performHapticFeedback()
     }
+
+    private fun resolve(key: VolumeKey): ResolvedAction? = ProfileResolver.resolve(
+        settings = settings,
+        foreground = foreground.current,
+        ownPackage = packageName,
+        key = key,
+        orientation = currentOrientation(),
+    )
 
     private fun performHapticFeedback() {
         val effect = VibrationEffect.createOneShot(
@@ -259,6 +221,8 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         }
 
     override fun onVolumeStep(key: VolumeKey) {
+        // 長押しで音量操作が始まったら、順番待ちの送りはもう要らない。
+        gestures.dropPending()
         val direction = when (key) {
             VolumeKey.UP -> AudioManager.ADJUST_RAISE
             VolumeKey.DOWN -> AudioManager.ADJUST_LOWER

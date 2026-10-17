@@ -46,7 +46,11 @@
         <activity
             android:name=".ui.AppPickerActivity"
             android:exported="false"
-            android:label="@string/enabled_apps" />
+            android:label="@string/add_app" />
+
+        <activity
+            android:name=".ui.ProfileEditActivity"
+            android:exported="false" />
 
         <activity
             android:name=".ui.PickPointActivity"

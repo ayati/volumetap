@@ -159,7 +159,7 @@ yomikake、電子書籍リーダーのように「画面の端をタップする
 | yomikake | タップ（現行）→ yomikake 改修後はドラッグ | §6.4 |
 | Chrome の一般サイト | ドラッグ | ツールバーの出入りで初回だけ送り量がずれる（§5.2） |
 | X | ドラッグ | 始点が下のタブバー・投稿ボタンにかからないよう調整。先頭での戻しに注意 |
-| Google Discover | ドラッグ | Google アプリ（`com.google.android.googlequicksearchbox`）として観測される見込み。ホーム画面の左に出す Discover が同じパッケージで観測されるかは要確認 |
+| Google Discover | ドラッグ | Google アプリ（`com.google.android.googlequicksearchbox`）として観測される。**ホーム画面の左（-1 画面）の Discover も同じ**（HyperOS で確認。画面はランチャーの上に重なった `GoogleDiscoverWindow`）。利用者は「Discover」「Google ニュース」の名前で探してしまうため、アプリ選択画面にヒントを出す |
 | FeedMe | ドラッグ | アプリ側に音量キーでのスクロール設定があれば、そちらが最も確実（要確認） |
 
 > アプリ自身が音量キーでのページ送りに対応している場合（電子書籍アプリに多い）は、
@@ -187,15 +187,17 @@ yomikake、電子書籍リーダーのように「画面の端をタップする
 ```
 service/
 ├── VolumeTapService.kt     変更: shouldIntercept / onShortPress をプロファイル経由に
-├── GestureDispatcher.kt    変更: drag() を追加。実行中ジェスチャの管理（§5.3）
-├── ProfileResolver.kt      新規: 前面アプリ → 送り方式（純ロジック・テスト対象）
-└── CalibrationOverlay.kt   新規: 対象アプリの上での始点終点の調整（§7.3）
+├── GestureDispatcher.kt    変更: drag() を追加。タップもドラッグも GestureQueue を通す
+├── GestureQueue.kt         新規: 連打の順番待ち（§5.3。純ロジック・テスト対象）
+├── ProfileResolver.kt      新規: 前面アプリ → 注入する操作、DragGeometry（純ロジック・テスト対象）
+└── CalibrationOverlay.kt   Phase 2: 対象アプリの上での始点終点の調整（§7.3）
 data/
-├── AppSettings.kt          変更: プロファイルを追加
-├── PageAction.kt           新規: 送り方式のモデル
-└── ProfileCodec.kt         新規: プロファイルの JSON 化（純ロジック・テスト対象）
+├── AppSettings.kt          変更: KeyAction に DRAG_* を追加、KeySetting / AppProfile
+└── ProfileCodec.kt         新規: プロファイルの文字列化と v0.10 からの移行（純ロジック・テスト対象）
 ui/
-├── MainActivity.kt         変更: 「アプリごとの設定」へ再構成
+├── MainActivity.kt         変更: 「アプリごとの割り当て」へ再構成
+├── AppPickerActivity.kt    変更: 複数選択の絞り込み → 1 つ選んで追加
+├── InstalledApps.kt        新規: アプリ名・アイコンの取得（3 画面で共用）
 └── ProfileEditActivity.kt  新規: 1 アプリぶんの設定画面
 ```
 
@@ -344,80 +346,97 @@ Chrome、X、Discover、FeedMe はいずれも、**一覧の先頭で下向き�
 
 ## 6. アプリごとのプロファイル
 
-### 6.1 データモデル
+### 6.1 データモデル（v0.11.0 の実装）
+
+当初案（`PageAction` の sealed 型、始点・終点を持つ `Drag`）より単純にした。
 
 ```kotlin
-/** 短押しで実行する送り方式。 */
-sealed interface PageAction {
-    /** 本来の音量（横取りしない）。 */
-    data object PassThrough : PageAction
+enum class KeyAction { NORMAL, TAP, DRAG_FORWARD, DRAG_BACKWARD }
 
-    /** 登録座標をタップ（現行の TAP）。 */
-    data class Tap(val portrait: TapPoint?, val landscape: TapPoint?) : PageAction
-
-    /** ドラッグでスクロール。start → end へ動かして止めて離す（§5.1）。 */
-    data class Drag(val start: RatioPoint, val end: RatioPoint) : PageAction
-}
+/** 1 つのキーの割り当て。タップ座標は action がタップ以外でも保持する。 */
+data class KeySetting(
+    val action: KeyAction = KeyAction.NORMAL,
+    val tapPortrait: TapPoint? = null,
+    val tapLandscape: TapPoint? = null,
+)
 
 data class AppProfile(
-    val packageName: String,
-    val volumeUp: PageAction,
-    val volumeDown: PageAction,
+    val volumeUp: KeySetting = KeySetting(),
+    val volumeDown: KeySetting = KeySetting(),
 )
 
 data class AppSettings(
-    /** パッケージ名 → プロファイル。ここに無いアプリでは一切介入しない。 */
+    /** パッケージ名 → プロファイル。 */
     val profiles: Map<String, AppProfile> = emptyMap(),
-    /** プロファイルの無いアプリにも適用する既定。null なら素通し（推奨）。 */
-    val fallbackProfile: AppProfile? = null,
+    /** 個別のプロファイルを持たないアプリ（ホーム画面を含む）に使う。初期値は両キーとも音量。 */
+    val defaultProfile: AppProfile = AppProfile(),
     val longPressMs: Int = DEFAULT_LONG_PRESS_MS,
     val hapticFeedback: Boolean = true,
     val paused: Boolean = false,
 )
 ```
 
-- `Drag` の向き（送る／戻す）は始点と終点から決まるので持たない。テンプレートとして
-  「送る（下から上）」「戻す（上から下）」を用意し、選ぶと既定の座標が入る
-- 縦横で座標を分けない（比率なので横持ちでも同じ割合で動く）。横持ちで不都合があれば後で足す
-- **`fallbackProfile` は「すべてのアプリで有効」だった現行設定の受け皿**であり、
-  新規ユーザーには勧めない。ドラッグをすべてのアプリに適用すると、ホーム画面や
-  地図アプリで画面が動いてしまう
+- **送り方式は既存の `KeyAction` に 2 つ足しただけ。** ドラッグの始点・終点は Phase 1 では
+  固定値（`DragGeometry`、§5.2）なので、型に持たせる必要がない。Phase 2 で
+  アプリごとに調整できるようにするときに `KeySetting` へ追加する
+- **タップ座標をキーごとに保持し続ける。** タップからドラッグに切り替え、
+  またタップに戻したときに登録し直さずに済む
+- **「その他のアプリ」（`defaultProfile`）は null にしない。** 初期値が両キーとも
+  `NORMAL` なので、「無い」と「何もしない」を区別する必要がない。v0.10 の
+  「すべてのアプリで有効」はここに移る
+- アプリを追加したときの初期値（`AppProfile.NEW_APP`）は「−で送る／＋で戻す」。
+  追加という明示的な操作をした以上、主な用途がすぐ使える状態にする
+- 「その他のアプリ」でもドラッグを選べるが、画面上で「ホーム画面や地図でも画面が動く」と
+  注意し、アプリを個別に追加するよう勧める（§15 の未決事項はこれで決着）
 
 ### 6.2 介入する条件（`design.md` §5.1 の改訂）
 
-`ACTION_DOWN` で次の順に判定し、1 つでも該当すれば素通しする。
+`ProfileResolver`（純ロジック・単体テストあり）が、`ACTION_DOWN` の時点で次の順に判定する。
+1 つでも該当すれば素通しする。
 
 1. `paused` が true
-2. 前面アプリが自アプリ（ただし §7.3 の調整中を除く）
-3. 前面アプリのプロファイルが無く、`fallbackProfile` も null
-4. そのキーの送り方式が `PassThrough`
-5. **送り方式が実行できない**:
-   - `Tap`: 現在の向きの座標が未登録
+2. 前面アプリが自アプリ
+3. 前面アプリのプロファイル（無ければ「その他のアプリ」）で、そのキーが `NORMAL`
+4. **送り方式が実行できない**: `TAP` で、現在の向きの座標が未登録
 
-5 は現行の「座標未登録なら音量」を一般化したもの。**「割り当てたのに何も起きず、
+4 は現行の「座標未登録なら音量」と同じ。**「割り当てたのに何も起きず、
 音量も効かない」状態を、どの送り方式でも構造的に作らない。**
+
+前面アプリがまだ分からない（サービス起動直後）ときは「その他のアプリ」に従う。
+v0.10 で絞り込みなしのときに介入していたのと同じ。
 
 ### 6.3 保存形式と移行
 
 DataStore Preferences は入れ子の構造を持てないため、プロファイル全体を
-**1 つの文字列キーに JSON で保存**する。
+**1 つの文字列キー（`profiles`）にまとめて保存**する。
 
-- JSON の読み書きには Android 標準の `org.json` を使い、ライブラリを増やさない
-  （`design.md` §13.4: 依存を増やすとライセンス表示の維持対象が増える）
-- 先頭に `"version": 1` を持たせ、将来の形式変更に備える
-- 壊れた JSON は読み飛ばして「プロファイル無し」として扱う（＝素通し。危険側に倒れない）
-- 読み書きは `ProfileCodec` に閉じ込め、往復と壊れた入力を単体テストする
+当初は `org.json` の予定だったが、**1 行 1 アプリの単純なテキスト形式**にした（`ProfileCodec`）。
+`org.json` は単体テストの環境では Android のスタブになっていて動かず、テスト用の
+依存を足す必要がある。この程度の構造なら自前の形式のほうが軽い。
 
-**v0.10 からの移行**（初回起動時に 1 回だけ。旧キーは 1 バージョン残してから消す）:
+```
+v1
+*|NORMAL,,,,|NORMAL,,,,                                 ← その他のアプリ
+com.android.chrome|DRAG_BACKWARD,,,,|DRAG_FORWARD,,,,   ← パッケージ|＋|−
+jp.example.reader|TAP,0.85,0.5,,|TAP,0.15,0.5,0.1,0.5   ← 種類,縦x,縦y,横x,横y
+```
+
+- 先頭行で形式の版を示す。知らない版なら読まない（＝v0.10 の設定から読み替える）
+- 壊れた行・範囲外の座標は読み飛ばし、未知の種類は `NORMAL` に倒す。危険側に倒れない
+
+**v0.10 からの移行**: 新しいキーがまだ無いときに、v0.10 のキーから読み替える（`LegacySettings`）。
 
 | v0.10 の設定 | 移行後 |
 |---|---|
-| `enabledPackages` が空（すべてのアプリ） | 旧設定の＋／−を `fallbackProfile` に入れる |
-| `enabledPackages` に N 個 | N 個のアプリそれぞれに旧設定の＋／−をコピーしたプロファイル |
-| `TAP` | `Tap`（縦横の座標をそのまま） |
-| `NORMAL` | `PassThrough` |
+| 「有効にするアプリ」が空（すべてのアプリ） | 旧設定の＋／−を「その他のアプリ」に入れる |
+| 「有効にするアプリ」に N 個 | N 個のアプリそれぞれに旧設定の＋／−をコピーし、「その他」は音量のまま |
 
-移行後の挙動は v0.10 と完全に同じになる。ドラッグはユーザーが選ぶまで現れない。
+- 移行後の挙動は v0.10 と完全に同じになる。ドラッグはユーザーが選ぶまで現れない
+- **旧キーは消さない。** 新しいキーを一度書けば以後はそちらが優先されるので害はなく、
+  v0.10 に戻したときにも設定が残る
+- 単体テストで 3 パターン（未設定・絞り込みなし・絞り込みあり）を確認。実機では
+  GitHub 版 v0.10.1 の上に v0.11.0 を上書きし、ユーザー補助が有効なまま設定が
+  引き継がれることを確認した（2026-10-17）
 
 ### 6.4 Chrome 上の yomikake と一般サイトの両立
 
@@ -468,7 +487,7 @@ yomikake は PWA なので前面アプリが `com.android.chrome` として観�
 │ 詳細設定                     │
 │ 長押し判定  [200][300][400][500]│
 │ 触覚フィードバック         ■ │
-│ 上記以外のアプリ     何もしない >│  ← fallbackProfile
+│ 上記以外のアプリ     何もしない >│  ← defaultProfile
 ├─────────────────────────────┤
 │ このアプリについて         > │
 └─────────────────────────────┘
@@ -730,7 +749,7 @@ Phase 1〜2 だけなら、**「権限は `VIBRATE` のみ、画面内容は読�
 
 ### 12.2 単体テスト（追加分）
 
-- `ProfileResolver`: プロファイル有り／無し／`fallbackProfile`、自アプリ、一時停止、
+- `ProfileResolver`: プロファイル有り／無し／「その他のアプリ」、自アプリ、一時停止、
   実行できない送り方式での素通し（§6.2 の条件 1〜5 すべて）
 - `ProfileCodec`: 往復、未知の `version`、壊れた JSON、未知の送り方式を素通し扱いにすること
 - 移行: v0.10 の各設定パターンが §6.3 の表どおりに変換されること
@@ -798,8 +817,8 @@ Phase 1〜2 だけなら、**「権限は `VIBRATE` のみ、画面内容は読�
 
 | Phase | 内容 | 完了条件 |
 |---|---|---|
-| **0** | 実機スパイク（ドラッグ値の決め打ち） | §12.1 の表が埋まり、ドラッグ方式の成立を判断できる |
-| **1** | `PageAction` / プロファイル / 移行 / ドラッグ / 待ち行列、設定画面の再構成 | Chrome と X で音量キーによる 1 画面送り・戻しができる。v0.10 からの移行で挙動が変わらない |
+| **0** ✅ | 実機スパイク（ドラッグ値の決め打ち） | §12.1 の表が埋まり、ドラッグ方式の成立を判断できる |
+| **1** ✅ v0.11.0 | プロファイル / 移行 / ドラッグ / 待ち行列、設定画面の再構成 | Chrome と X で音量キーによる 1 画面送り・戻しができる。v0.10 からの移行で挙動が変わらない |
 | **2** | 重ね表示での調整（ドラッグ・タップ両方） | 対象アプリの上で始点終点を決め、試し撃ちできる |
 | **2'** | yomikake に縦ドラッグでのページ送りを追加（yomikake 側） | Chrome のプロファイル 1 つで yomikake と一般サイトの両方が使える |
 | ~~3~~ | ~~スクロール補助サービス~~ | 不採用（§8） |
@@ -816,7 +835,7 @@ Play のクローズドテスト中であれば、Phase 1 の公開はテスタ�
 |---|---|
 | 冒頭・§1 | 「タップ、それだけ」→「タップとスクロール」。差別化 4 点の「機能」欄を改める |
 | §1.1 スコープ外 | PageUp/Down とジェスチャ注入の項を削除し、本書 §2 の経緯を要約して残す。「プロファイル切り替え、アプリごとの別座標」も削除 |
-| §3.1 | `KeyAction` → `PageAction` |
+| §3.1 | `KeyAction` に `DRAG_FORWARD` / `DRAG_BACKWARD` を追加 |
 | §5.1 | 介入しない条件を本書 §6.2 に差し替え |
 | §5.3 | データモデルを本書 §6.1 に差し替え |
 | §6 | 画面設計を本書 §7 に差し替え |
@@ -828,8 +847,8 @@ Play のクローズドテスト中であれば、Phase 1 の公開はテスタ�
 
 ## 15. 未決事項
 
-- `continueStroke` が実機で安定するか（§5.1）。不安定なら末尾の微小往復で代替
-- Discover がホーム画面の左に出る場合の前面パッケージ名（§3.6）
+- ~~`continueStroke` が実機で安定するか~~ → 安定していた（§12.1.1）
+- ~~Discover がホーム画面の左に出る場合の前面パッケージ名~~ → Google アプリ（§3.6）
 - FeedMe 自身の音量キー対応の有無（§3.6）
-- `fallbackProfile` にドラッグを許すか。許すなら、ホーム画面（ランチャー）では
-  常に素通しする例外を設けるか
+- ~~「その他のアプリ」にドラッグを許すか~~ → 許す。画面上で注意し、アプリを
+  個別に追加するよう勧める（§6.1）。ランチャーを例外にはしない

@@ -6,8 +6,8 @@
       ユーザー補助の一覧と Play 審査で参照される説明文。
       isAccessibilityTool="true" の宣言と齟齬がないよう、補助ツールとしての用途を明示する。
     -->
-    <string name="accessibility_service_summary">ボリュームキーで画面タップを代替します</string>
-    <string name="accessibility_service_description">画面をタップするのが難しいときに、ボリュームキーの短押しで、あらかじめ登録した位置をタップできるようにします。片手持ちや寝転んでの読書、指の可動が制限される状況での操作を助けます。\n\nキーを長押ししたときは、これまでどおりの音量調整になります。\n\nこのアプリは画面に表示されている内容を読み取りません。インターネットに接続する権限も持たないため、情報が外部に送信されることはありません。</string>
+    <string name="accessibility_service_summary">ボリュームキーで画面のタップやスクロールを代替します</string>
+    <string name="accessibility_service_description">画面に触れるのが難しいときに、ボリュームキーの短押しで、画面を 1 画面ずつスクロールしたり、あらかじめ登録した位置をタップしたりできるようにします。片手持ちや寝転んでの読書、指の可動が制限される状況での操作を助けます。\n\nキーを長押ししたときは、これまでどおりの音量調整になります。\n\nこのアプリは画面に表示されている内容を読み取りません。インターネットに接続する権限も持たないため、情報が外部に送信されることはありません。</string>
 
     <!-- 設定画面 -->
     <string name="service_disabled_title">ユーザー補助が無効です</string>
@@ -18,12 +18,26 @@
     <string name="open_app_info">アプリ情報を開く</string>
     <string name="open_app_info_failed">アプリ情報を開けませんでした</string>
     <string name="open_accessibility_settings">設定を開く</string>
-    <string name="model_hint">短押し＝タップ / 長押し＝音量</string>
+    <string name="model_hint">短押し＝ページ送り / 長押し＝音量</string>
     <string name="volume_up_section">音量 ＋ の短押し</string>
     <string name="volume_down_section">音量 − の短押し</string>
     <string name="action_normal">本来の音量調整</string>
     <string name="action_tap">指定位置をタップ</string>
-    <string name="long_press_threshold">長押し判定</string>
+    <string name="action_drag_forward">ドラッグで次の画面へ送る</string>
+    <string name="action_drag_backward">ドラッグで前の画面へ戻す</string>
+    <string name="action_short_normal">音量</string>
+    <string name="action_short_tap">タップ</string>
+    <string name="action_short_forward">送る</string>
+    <string name="action_short_backward">戻す</string>
+    <string name="profile_summary">−：%1$s　＋：%2$s</string>
+    <string name="add_app">アプリを追加</string>
+    <string name="default_profile">その他のアプリ</string>
+    <string name="default_profile_hint">個別に追加していないアプリ（ホーム画面を含む）で使われます。ここでドラッグを選ぶと、ホーム画面や地図などでも画面が動いてしまうため、使うアプリを個別に追加するのがおすすめです。</string>
+    <string name="no_profiles_hint">まだアプリを追加していません。「アプリを追加」から、ページ送りに使うアプリを選んでください。</string>
+    <string name="drag_forward_hint">画面の中央を下から上へなぞる操作で、次の 1 画面へスクロールします。</string>
+    <string name="drag_backward_hint">画面の中央を上から下へなぞる操作で、前の 1 画面へ戻ります。一覧の先頭付近では、アプリによっては「引っ張って更新」が働き、一覧が読み込み直されることがあります。</string>
+    <string name="delete_profile">このアプリの割り当てを削除</string>
+    <string name="long_press_threshold">長押し判定（ミリ秒）</string>
     <string name="haptic_feedback">触覚フィードバック</string>
     <string name="tap_point_unregistered">座標が未登録のため、いまは音量調整のまま動作します</string>
     <string name="tap_point_portrait">縦</string>
@@ -42,16 +56,10 @@
     <string name="pick_decide">決定</string>
     <string name="cancel">キャンセル</string>
 
-    <!-- 誤爆防止（Phase 4） -->
-    <string name="enabled_apps">有効にするアプリ</string>
-    <string name="enabled_apps_all">すべてのアプリ</string>
-    <string name="enabled_apps_count">%1$d 個のアプリ</string>
-    <string name="app_picker_all">ひとつも選ばない場合は、すべてのアプリでボリュームキーを横取りします。読書アプリだけを選ぶと、ホーム画面や他のアプリでは通常の音量調整になります。</string>
-    <string name="app_picker_selected">%1$d 個のアプリを選択中。選んだアプリが前面のときだけ横取りします。</string>
-    <string name="clear_all">すべて解除</string>
-    <string name="app_picker_pwa_hint">💡 PWA（ホーム画面に追加したウェブアプリ）はこの一覧に出ません。ブラウザ上で動くため、yomikake などを使う場合は Chrome などのブラウザを選んでください。その場合、通常のブラウジング中もボリュームキーが横取りされます。読書以外では一時停止（クイック設定タイル）で切り替えるのが便利です。</string>
-    <string name="app_picker_orphans">一覧にないアプリ</string>
-    <string name="app_picker_orphans_body">アンインストール済みなどの理由で一覧に出ないアプリです。不要なら解除してください。</string>
+    <!-- アプリの追加・誤爆防止 -->
+    <string name="app_picker_configured">設定済み</string>
+    <string name="app_picker_discover_hint">💡 Google Discover は「Google」を選んでください。ホーム画面の左に出る Discover も、Google アプリとして扱われます（「Google ニュース」は別のアプリです）。</string>
+    <string name="app_picker_pwa_hint">💡 PWA（ホーム画面に追加したウェブアプリ）はこの一覧に出ません。ブラウザ上で動くため、yomikake などを使う場合は Chrome などのブラウザを選んでください。</string>
     <string name="pause">一時停止</string>
     <string name="pause_body">一時停止中はボリュームキーが通常どおり動きます。クイック設定タイルからも切り替えられます。</string>
     <string name="tile_running">動作中</string>
@@ -63,7 +71,7 @@
     <!-- このアプリについて（Phase 3） -->
     <string name="about">このアプリについて</string>
     <string name="version_format">バージョン %1$s (%2$d)</string>
-    <string name="about_tagline">ボリュームボタンの短押しで、設定した位置をタップします。長押しは本来の音量調整のままです。広告なし・課金なし・ネットワーク接続なし。</string>
+    <string name="about_tagline">ボリュームボタンの短押しで、画面を 1 画面ずつスクロールしたり、設定した位置をタップしたりします。長押しは本来の音量調整のままです。広告なし・課金なし・ネットワーク接続なし。</string>
     <string name="repository">ソースコード（GitHub）</string>
     <string name="privacy_policy">プライバシーポリシー</string>
     <string name="about_license_note">コードは MIT ライセンスで公開しています。「volumetap」の名称およびアプリアイコンは MIT ライセンスの対象外です。</string>
@@ -78,7 +86,7 @@
     <string name="hide_full_text">%1$s の全文を隠す</string>
 
     <!-- 設定画面の見出し -->
-    <string name="section_assignment">短押しの割り当て</string>
+    <string name="section_assignment">アプリごとの割り当て</string>
     <string name="section_scope">動作する範囲</string>
     <string name="section_advanced">詳細設定</string>
 </resources>

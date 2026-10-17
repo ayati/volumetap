@@ -74,21 +74,29 @@ class PickPointActivity : ComponentActivity() {
         val key = runCatching {
             VolumeKey.valueOf(intent.getStringExtra(EXTRA_KEY).orEmpty())
         }.getOrDefault(VolumeKey.UP)
+        // null なら「その他のアプリ」の割り当て。
+        val packageName: String? = intent.getStringExtra(EXTRA_PACKAGE)
         val repository = SettingsRepository(this)
 
         setContent {
             var existing by remember { mutableStateOf<TapPoint?>(null) }
             LaunchedEffect(Unit) {
-                existing = repository.settings.first().tapPointFor(key, currentOrientation())
+                val settings = repository.settings.first()
+                val profile = if (packageName == null) {
+                    settings.defaultProfile
+                } else {
+                    settings.profileFor(packageName)
+                }
+                existing = profile.settingFor(key).tapPointFor(currentOrientation())
             }
             PickPointScreen(
                 existing = existing,
                 onConfirm = { ratioX, ratioY ->
                     lifecycleScope.launch {
-                        repository.setTapPoint(
-                            key,
-                            TapPoint(ratioX, ratioY, currentOrientation()),
-                        )
+                        val point = TapPoint(ratioX, ratioY, currentOrientation())
+                        repository.updateProfile(packageName) { p ->
+                            p.with(key) { it.withTapPoint(point) }
+                        }
                         finish()
                     }
                 },
@@ -106,9 +114,13 @@ class PickPointActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_KEY = "volume_key"
+        private const val EXTRA_PACKAGE = "package"
 
-        fun intent(context: Context, key: VolumeKey): Intent =
-            Intent(context, PickPointActivity::class.java).putExtra(EXTRA_KEY, key.name)
+        /** @param packageName どのアプリの割り当てか。null なら「その他のアプリ」。 */
+        fun intent(context: Context, packageName: String?, key: VolumeKey): Intent =
+            Intent(context, PickPointActivity::class.java)
+                .putExtra(EXTRA_KEY, key.name)
+                .putExtra(EXTRA_PACKAGE, packageName)
     }
 }
 

@@ -6,7 +6,6 @@ import android.content.Context
 import android.graphics.Path
 import android.graphics.Point
 import android.os.Build
-import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
@@ -32,76 +31,45 @@ object ScreenMetrics {
     }
 }
 
-/** [AccessibilityService.dispatchGesture] によるタップ注入（設計書 §5.2）。 */
+/**
+ * [AccessibilityService.dispatchGesture] によるタップ・ドラッグの注入
+ * （設計書 §5.2、design-pageturn.md §5.1）。
+ *
+ * タップもドラッグも [GestureQueue] を通す。新しい注入は実行中のジェスチャを取り消すため、
+ * 重ねて出さない。
+ */
 class GestureDispatcher(private val service: AccessibilityService) {
+
+    private val queue = GestureQueue()
 
     /**
      * 画面比率で指定した位置を 1 回タップする。
      *
-     * @return ジェスチャの登録に成功したら true。実際に届いたかは非同期で
+     * @return 発行または順番待ちに入れたら true。実際に届いたかは非同期で
      *   [GestureResultCallback] に返るため、ここでの true は「発行できた」ことのみを意味する。
      */
-    fun tap(ratioX: Float, ratioY: Float, durationMs: Long = TAP_DURATION_MS): Boolean {
-        val size = ScreenMetrics.realSize(service)
-        if (size.x <= 0 || size.y <= 0) {
-            Log.w(TAG, "invalid screen size: $size")
-            return false
-        }
+    fun tap(ratioX: Float, ratioY: Float): Boolean = submit("tap") {
+        val size = screenSize() ?: return@submit false
         // 端ぴったりの座標はウィンドウ外と判定されうるため 1px 内側に丸める。
         val x = (ratioX.coerceIn(0f, 1f) * size.x).coerceIn(0f, size.x - 1f)
         val y = (ratioY.coerceIn(0f, 1f) * size.y).coerceIn(0f, size.y - 1f)
 
         val path = Path().apply { moveTo(x, y) }
-        val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0L, durationMs))
-            .build()
-
-        val dispatched = service.dispatchGesture(gesture, resultCallback, null)
-        if (!dispatched) {
-            // サービスが接続されていない、または他のジェスチャと競合した場合。
-            Log.w(TAG, "dispatchGesture rejected at ($x, $y)")
-        }
-        return dispatched
+        val stroke = GestureDescription.StrokeDescription(path, 0L, TAP_DURATION_MS)
+        dispatch(stroke, "tap at ($x, $y)") { queue.finish() }
     }
 
-    /** ドラッグの実行中か。新しい注入は実行中のジェスチャを取り消すため、重ねて出さない。 */
-    private var dragging = false
-
-    /** 実行中に来た次のドラッグ。1 件だけ待たせ、それ以上は捨てる（design-pageturn.md §5.3）。 */
-    private var pendingDrag: (() -> Unit)? = null
-
     /**
-     * 画面比率で指定した 2 点間をドラッグする（design-pageturn.md §5.1）。
+     * 画面比率で指定した 2 点間をドラッグする。
      *
-     * 動かしたまま離すと慣性スクロール（フリング）になるため、移動の後に [holdMs] だけ
-     * 静止してから離す。静止は [GestureDescription.StrokeDescription.continueStroke] で
-     * 第 2 ストロークとして出す。[holdMs] が 0 なら静止せずに離す。
-     *
-     * @return 発行または待ち行列への追加に成功したら true。
+     * 動かしたまま離すと慣性スクロール（フリング）になるため、移動の後に
+     * [DragGeometry.HOLD_MS] だけ静止してから離す。静止は
+     * [GestureDescription.StrokeDescription.continueStroke] で第 2 ストロークとして出す。
+     * 試作機では第 1・第 2 ストロークの隙間は 1〜6ms で、指が離れた扱いにはならなかった。
      */
-    fun drag(
-        fromX: Float,
-        fromY: Float,
-        toX: Float,
-        toY: Float,
-        dragMs: Long,
-        holdMs: Long,
-    ): Boolean {
-        if (dragging) {
-            if (pendingDrag != null) {
-                Log.i(TAG, "drag dropped: another one is already waiting")
-                return false
-            }
-            Log.i(TAG, "drag queued")
-            pendingDrag = { drag(fromX, fromY, toX, toY, dragMs, holdMs) }
-            return true
-        }
-        val size = ScreenMetrics.realSize(service)
-        if (size.x <= 0 || size.y <= 0) {
-            Log.w(TAG, "invalid screen size: $size")
-            return false
-        }
-        // 端から始めるとシステムジェスチャ（ホーム・戻る・通知）になるため内側に丸める（§5.5）。
+    fun drag(fromX: Float, fromY: Float, toX: Float, toY: Float): Boolean = submit("drag") {
+        val size = screenSize() ?: return@submit false
+        // 端から始めるとシステムジェスチャ（ホーム・戻る・通知）になるため内側に丸める。
         val x0 = fromX.coerceIn(EDGE_X, 1f - EDGE_X) * size.x
         val y0 = fromY.coerceIn(EDGE_Y, 1f - EDGE_Y) * size.y
         val x1 = toX.coerceIn(EDGE_X, 1f - EDGE_X) * size.x
@@ -111,68 +79,59 @@ class GestureDispatcher(private val service: AccessibilityService) {
             moveTo(x0, y0)
             lineTo(x1, y1)
         }
-        val hold = holdMs > 0
-        val first = GestureDescription.StrokeDescription(move, 0L, dragMs, hold)
-        val startedAt = SystemClock.uptimeMillis()
-        Log.i(TAG, "drag start ($x0, $y0) -> ($x1, $y1) in ${dragMs}ms, hold ${holdMs}ms")
+        val first = GestureDescription.StrokeDescription(move, 0L, DragGeometry.MOVE_MS, true)
+        dispatch(first, "drag ($x0, $y0) -> ($x1, $y1)") {
+            val stay = Path().apply { moveTo(x1, y1) }
+            val second = first.continueStroke(stay, 0L, DragGeometry.HOLD_MS, false)
+            if (!dispatch(second, "drag hold") { queue.finish() }) queue.finish()
+        }
+    }
 
-        val onMoved = object : AccessibilityService.GestureResultCallback() {
-            override fun onCompleted(gestureDescription: GestureDescription?) {
-                val movedAt = SystemClock.uptimeMillis()
-                Log.i(TAG, "drag moved after ${movedAt - startedAt}ms")
-                if (!hold) {
-                    finishDrag()
-                    return
-                }
-                val stay = Path().apply { moveTo(x1, y1) }
-                val second = GestureDescription.Builder()
-                    .addStroke(first.continueStroke(stay, 0L, holdMs, false))
-                    .build()
-                val onReleased = object : AccessibilityService.GestureResultCallback() {
-                    override fun onCompleted(gestureDescription: GestureDescription?) {
-                        val now = SystemClock.uptimeMillis()
-                        Log.i(TAG, "drag released after ${now - startedAt}ms (gap+hold ${now - movedAt}ms)")
-                        finishDrag()
-                    }
+    /** 順番待ちを捨てる。長押しで音量操作が始まったら、溜まっていた送りは不要。 */
+    fun dropPending() = queue.dropPending()
 
-                    override fun onCancelled(gestureDescription: GestureDescription?) {
-                        Log.w(TAG, "drag hold cancelled")
-                        finishDrag()
-                    }
-                }
-                if (!service.dispatchGesture(second, onReleased, null)) {
-                    Log.w(TAG, "dispatchGesture rejected the hold stroke")
-                    finishDrag()
-                }
-            }
+    fun reset() = queue.reset()
+
+    private fun submit(label: String, start: () -> Boolean): Boolean {
+        val accepted = queue.submit(start)
+        if (!accepted) Log.i(TAG, "$label dropped")
+        return accepted
+    }
+
+    /**
+     * ストロークを 1 本発行する。[onCompleted] は完了時だけ呼ぶ。取り消し時は
+     * 順番待ちを進めるだけにする（ドラッグの第 2 ストロークを出さない）。
+     */
+    private fun dispatch(
+        stroke: GestureDescription.StrokeDescription,
+        label: String,
+        onCompleted: () -> Unit,
+    ): Boolean {
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()
+        val callback = object : AccessibilityService.GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) = onCompleted()
 
             override fun onCancelled(gestureDescription: GestureDescription?) {
-                Log.w(TAG, "drag move cancelled")
-                finishDrag()
+                // FLAG_SECURE の画面やシステム UI 上、利用者が画面に触れたときはここに来る。
+                Log.i(TAG, "cancelled: $label")
+                queue.finish()
             }
         }
-
-        val gesture = GestureDescription.Builder().addStroke(first).build()
-        if (!service.dispatchGesture(gesture, onMoved, null)) {
-            Log.w(TAG, "dispatchGesture rejected the drag")
-            return false
+        val dispatched = service.dispatchGesture(gesture, callback, null)
+        if (!dispatched) {
+            // サービスが接続されていない場合など。
+            Log.w(TAG, "dispatchGesture rejected: $label")
         }
-        dragging = true
-        return true
+        return dispatched
     }
 
-    private fun finishDrag() {
-        dragging = false
-        val next = pendingDrag ?: return
-        pendingDrag = null
-        next()
-    }
-
-    private val resultCallback = object : AccessibilityService.GestureResultCallback() {
-        override fun onCancelled(gestureDescription: GestureDescription?) {
-            // FLAG_SECURE の画面やシステム UI 上ではここに来る（設計書 §8）。
-            Log.i(TAG, "gesture cancelled")
+    private fun screenSize(): Point? {
+        val size = ScreenMetrics.realSize(service)
+        if (size.x <= 0 || size.y <= 0) {
+            Log.w(TAG, "invalid screen size: $size")
+            return null
         }
+        return size
     }
 
     companion object {
