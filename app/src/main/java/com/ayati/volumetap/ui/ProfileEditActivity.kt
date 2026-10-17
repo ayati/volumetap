@@ -3,6 +3,7 @@ package com.ayati.volumetap.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -33,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,11 +45,14 @@ import androidx.lifecycle.lifecycleScope
 import com.ayati.volumetap.R
 import com.ayati.volumetap.data.AppProfile
 import com.ayati.volumetap.data.AppSettings
+import com.ayati.volumetap.data.DragLane
 import com.ayati.volumetap.data.KeyAction
 import com.ayati.volumetap.data.KeySetting
 import com.ayati.volumetap.data.ScreenOrientation
 import com.ayati.volumetap.data.SettingsRepository
 import com.ayati.volumetap.data.TapPoint
+import com.ayati.volumetap.service.CalibrationRequests
+import com.ayati.volumetap.service.DragDirection
 import com.ayati.volumetap.service.VolumeKey
 import kotlinx.coroutines.launch
 
@@ -57,6 +62,14 @@ import kotlinx.coroutines.launch
  * パッケージ名を渡さなければ「その他のアプリ」（個別の割り当てを持たないアプリ）を編集する。
  */
 class ProfileEditActivity : ComponentActivity() {
+
+    /** 調整はサービスが重ね表示を出すので、ユーザー補助が有効なときだけできる。 */
+    private val serviceEnabled = mutableStateOf(false)
+
+    override fun onResume() {
+        super.onResume()
+        serviceEnabled.value = isVolumeTapServiceEnabled()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,14 +92,22 @@ class ProfileEditActivity : ComponentActivity() {
                 val removed = packageName != null && packageName !in current.profiles
                 LaunchedEffect(removed) { if (removed) finish() }
                 if (removed) return@VolumeTapTheme
+                val title = if (packageName == null) {
+                    stringResource(R.string.default_profile)
+                } else {
+                    app?.label ?: packageName
+                }
                 ProfileEditScreen(
-                    title = if (packageName == null) {
-                        stringResource(R.string.default_profile)
-                    } else {
-                        app?.label ?: packageName
-                    },
+                    title = title,
                     isDefault = packageName == null,
                     profile = profileOf(current, packageName),
+                    serviceEnabled = serviceEnabled.value,
+                    onCalibrate = { packageName?.let { startCalibration(it, profileOf(current, it)) } },
+                    onResetDragLane = { orientation ->
+                        lifecycleScope.launch {
+                            repository.updateProfile(packageName) { it.withDragLane(orientation, null) }
+                        }
+                    },
                     onBack = ::finish,
                     onActionChange = { key, action ->
                         lifecycleScope.launch {
@@ -118,6 +139,28 @@ class ProfileEditActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * 対象アプリを起動し、サービスに調整を依頼する（design-pageturn.md §7.3.4）。
+     * 対象アプリが前面に来たら、サービスが待機の帯を出す。
+     */
+    private fun startCalibration(packageName: String, profile: AppProfile) {
+        val launch = packageManager.getLaunchIntentForPackage(packageName)
+        if (launch == null) {
+            Toast.makeText(this, R.string.calibrate_launch_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        // 送りに割り当てたキーがあれば送りから。
+        val direction = if (profile.volumeDown.action == KeyAction.DRAG_FORWARD ||
+            profile.volumeUp.action == KeyAction.DRAG_FORWARD
+        ) {
+            DragDirection.FORWARD
+        } else {
+            DragDirection.BACKWARD
+        }
+        CalibrationRequests.request(packageName, direction)
+        startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
     private fun profileOf(settings: AppSettings, packageName: String?): AppProfile =
         if (packageName == null) settings.defaultProfile else settings.profileFor(packageName)
 
@@ -136,6 +179,9 @@ private fun ProfileEditScreen(
     title: String,
     isDefault: Boolean,
     profile: AppProfile,
+    serviceEnabled: Boolean,
+    onCalibrate: () -> Unit,
+    onResetDragLane: (ScreenOrientation) -> Unit,
     onBack: () -> Unit,
     onActionChange: (VolumeKey, KeyAction) -> Unit,
     onRegisterPoint: (VolumeKey) -> Unit,
@@ -181,6 +227,16 @@ private fun ProfileEditScreen(
                     onSelect = { onActionChange(key, it) },
                     onRegister = { onRegisterPoint(key) },
                     onClear = { onClearPoint(key, it) },
+                )
+            }
+            // 「その他のアプリ」は重ねる先のアプリが決まらないので調整できない（§7.3.1）。
+            if (!isDefault && profile.usesDrag) {
+                DragLaneSection(
+                    appLabel = title,
+                    profile = profile,
+                    serviceEnabled = serviceEnabled,
+                    onCalibrate = onCalibrate,
+                    onReset = onResetDragLane,
                 )
             }
             if (!isDefault) {
@@ -233,6 +289,87 @@ private fun KeySection(
         }
     }
 }
+
+/**
+ * ドラッグの位置と送り量（design-pageturn.md §7.3.8）。送り量を＋と−で共有するので、
+ * キーごとではなくアプリに 1 つ。
+ */
+@Composable
+private fun DragLaneSection(
+    appLabel: String,
+    profile: AppProfile,
+    serviceEnabled: Boolean,
+    onCalibrate: () -> Unit,
+    onReset: (ScreenOrientation) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.drag_lane_section),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            for (orientation in ScreenOrientation.entries) {
+                val own = profile.dragLaneOrNull(orientation)
+                val summary = when {
+                    own != null -> stringResource(R.string.drag_lane_custom, percent(own))
+                    orientation == ScreenOrientation.LANDSCAPE && profile.dragPortrait != null ->
+                        stringResource(R.string.drag_lane_same_as_portrait)
+                    else -> stringResource(R.string.drag_lane_default, percent(DragLane.DEFAULT))
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (orientation == ScreenOrientation.PORTRAIT) {
+                                R.string.drag_lane_portrait
+                            } else {
+                                R.string.drag_lane_landscape
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (own != null) {
+                        TextButton(onClick = { onReset(orientation) }) {
+                            Text(stringResource(R.string.drag_lane_reset))
+                        }
+                    }
+                }
+            }
+            OutlinedButton(
+                onClick = onCalibrate,
+                enabled = serviceEnabled,
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Text(stringResource(R.string.calibrate_on_app, appLabel))
+            }
+            Text(
+                text = stringResource(
+                    if (serviceEnabled) R.string.calibrate_hint else R.string.calibrate_needs_service,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (serviceEnabled) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+    }
+}
+
+private fun percent(lane: DragLane): Int = Math.round(lane.amount * 100)
 
 @Composable
 private fun TapPointSettings(

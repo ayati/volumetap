@@ -34,8 +34,8 @@
     <string name="default_profile">その他のアプリ</string>
     <string name="default_profile_hint">個別に追加していないアプリ（ホーム画面を含む）で使われます。ここでドラッグを選ぶと、ホーム画面や地図などでも画面が動いてしまうため、使うアプリを個別に追加するのがおすすめです。</string>
     <string name="no_profiles_hint">まだアプリを追加していません。「アプリを追加」から、ページ送りに使うアプリを選んでください。</string>
-    <string name="drag_forward_hint">画面の中央を下から上へなぞる操作で、次の 1 画面へスクロールします。</string>
-    <string name="drag_backward_hint">画面の中央を上から下へなぞる操作で、前の 1 画面へ戻ります。一覧の先頭付近では、アプリによっては「引っ張って更新」が働き、一覧が読み込み直されることがあります。</string>
+    <string name="drag_forward_hint">画面を下から上へなぞる操作で、次の 1 画面へスクロールします。</string>
+    <string name="drag_backward_hint">画面を上から下へなぞる操作で、前の 1 画面へ戻ります。一覧の先頭付近では、アプリによっては「引っ張って更新」が働き、一覧が読み込み直されることがあります。</string>
     <string name="delete_profile">このアプリの割り当てを削除</string>
     <string name="long_press_threshold">長押し判定（ミリ秒）</string>
     <string name="haptic_feedback">触覚フィードバック</string>
@@ -89,4 +89,34 @@
     <string name="section_assignment">アプリごとの割り当て</string>
     <string name="section_scope">動作する範囲</string>
     <string name="section_advanced">詳細設定</string>
+
+    <!-- ドラッグの調整（design-pageturn.md §7.3） -->
+    <string name="drag_lane_section">ドラッグの位置と送り量</string>
+    <string name="drag_lane_portrait">縦持ち</string>
+    <string name="drag_lane_landscape">横持ち</string>
+    <string name="drag_lane_default">既定（送り量 %1$d%%）</string>
+    <string name="drag_lane_custom">調整済み（送り量 %1$d%%）</string>
+    <string name="drag_lane_same_as_portrait">縦持ちと同じ</string>
+    <string name="drag_lane_reset">既定に戻す</string>
+    <string name="drag_lane_tuned_badge">調整済み</string>
+    <string name="calibrate_on_app">%1$s の上で調整</string>
+    <string name="calibrate_hint">アプリを開き、実際の画面の上で位置と送り量を調整します。調整は、そのときの画面の向き（縦持ち・横持ち）に保存されます。</string>
+    <string name="calibrate_needs_service">ユーザー補助で volumetap を有効にすると、調整できます。</string>
+    <string name="calibrate_launch_failed">アプリを起動できませんでした</string>
+    <string name="calibration_band_text">%1$s のドラッグを調整します。長いページなど、調整したい画面を開いてから「始める」を押してください。</string>
+    <string name="calibration_begin">始める</string>
+    <string name="calibration_cancel">やめる</string>
+    <string name="calibration_forward">送り ↑</string>
+    <string name="calibration_backward">戻し ↓</string>
+    <string name="calibration_amount">送り量 %1$d%%</string>
+    <string name="calibration_hint">○ 始点をつかむと線ごと動き、● 終点をつかむと送り量が変わります。表示されている範囲より大きく送ると、行を読み飛ばします。</string>
+    <string name="calibration_test">試す</string>
+    <string name="calibration_reset">既定に戻す</string>
+    <string name="calibration_save">保存</string>
+    <string name="calibration_zone">ここからは指を置けません（ホーム・通知の操作になります）</string>
+    <string name="calibration_test_failed">うまく試せませんでした。もう一度「試す」を押してください。</string>
+    <string name="calibration_saved">ドラッグの調整を保存しました</string>
+    <string name="calibration_closed_left">アプリから離れたため、調整をやめました</string>
+    <string name="calibration_closed_rotated">画面の向きが変わったため、調整をやめました</string>
+    <string name="calibration_closed_screen_off">画面が消えたため、調整をやめました</string>
 </resources>

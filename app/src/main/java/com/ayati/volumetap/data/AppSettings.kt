@@ -15,6 +15,9 @@ enum class KeyAction {
 
     /** 画面を上から下へドラッグし、前の 1 画面へ戻す。 */
     DRAG_BACKWARD,
+    ;
+
+    val isDrag: Boolean get() = this == DRAG_FORWARD || this == DRAG_BACKWARD
 }
 
 enum class ScreenOrientation { PORTRAIT, LANDSCAPE }
@@ -57,11 +60,44 @@ data class KeySetting(
     }
 }
 
-/** あるアプリでの音量＋／−の割り当て（design-pageturn.md §6.1）。 */
+/**
+ * あるアプリでの音量＋／−の割り当て（design-pageturn.md §6.1）。
+ *
+ * ドラッグの形はキーごとではなくアプリごとに持つ。送り量を＋と−で共有するため（§7.3.3）。
+ */
 data class AppProfile(
     val volumeUp: KeySetting = KeySetting(),
     val volumeDown: KeySetting = KeySetting(),
+    /** 縦持ちのドラッグの形。null なら既定値。 */
+    val dragPortrait: DragLane? = null,
+    /** 横持ちのドラッグの形。null なら縦持ちの値（それも無ければ既定値）。 */
+    val dragLandscape: DragLane? = null,
 ) {
+    fun dragLaneFor(orientation: ScreenOrientation): DragLane =
+        dragLaneOrNull(orientation) ?: fallbackDragLane(orientation)
+
+    /** その向きで調整した値。未調整なら null。 */
+    fun dragLaneOrNull(orientation: ScreenOrientation): DragLane? = when (orientation) {
+        ScreenOrientation.PORTRAIT -> dragPortrait
+        ScreenOrientation.LANDSCAPE -> dragLandscape
+    }
+
+    /** その向きを調整していないときに使われる値（タップ座標と同じ規則）。 */
+    fun fallbackDragLane(orientation: ScreenOrientation): DragLane = when (orientation) {
+        ScreenOrientation.PORTRAIT -> DragLane.DEFAULT
+        ScreenOrientation.LANDSCAPE -> dragPortrait ?: DragLane.DEFAULT
+    }
+
+    /** その向きの値を差し替える。null で未調整に戻す。 */
+    fun withDragLane(orientation: ScreenOrientation, lane: DragLane?): AppProfile = when (orientation) {
+        ScreenOrientation.PORTRAIT -> copy(dragPortrait = lane)
+        ScreenOrientation.LANDSCAPE -> copy(dragLandscape = lane)
+    }
+
+    /** どちらかのキーがドラッグか。調整の欄を出すかどうかに使う。 */
+    val usesDrag: Boolean
+        get() = volumeUp.action.isDrag || volumeDown.action.isDrag
+
     fun settingFor(key: VolumeKey): KeySetting = when (key) {
         VolumeKey.UP -> volumeUp
         VolumeKey.DOWN -> volumeDown

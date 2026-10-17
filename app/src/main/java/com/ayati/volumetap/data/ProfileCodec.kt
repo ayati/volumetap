@@ -12,9 +12,15 @@ package com.ayati.volumetap.data
  * *|NORMAL,,,,|NORMAL,,,,                       ← 既定のプロファイル
  * com.android.chrome|DRAG_BACKWARD,,,,|DRAG_FORWARD,,,,
  * jp.example.reader|TAP,0.85,0.5,,|TAP,0.15,0.5,0.1,0.5
+ * com.twitter.android|DRAG_BACKWARD,,,,|DRAG_FORWARD,,,,|0.5,0.6,0.78,0.3|
  * ```
  *
  * 各キーは `種類,縦x,縦y,横x,横y`（未登録の座標は空）。パッケージ名に `|` や `,` は現れない。
+ *
+ * ドラッグの形（design-pageturn.md §7.3.3）は、調整したアプリだけ末尾に `|縦|横` の 2 欄を足す。
+ * 各欄は `x,送り量,送りの始点,戻しの始点`（未調整は空）。**ヘッダーは v1 のまま。** v2 にすると、
+ * v0.11.0 が読めずに v0.10 の設定から読み直し、利用者の設定が丸ごと巻き戻るため。
+ * v1 のまま欄を足せば、v0.11.0 は調整したアプリの行だけを読み飛ばす。
  *
  * **壊れた行・未知の値は読み飛ばす。** 読めないプロファイルは「無い」扱いになり、
  * 既定のプロファイル（初期値は音量のまま）に倒れる。危険側（意図しない注入）には転ばない。
@@ -43,10 +49,16 @@ object ProfileCodec {
         val profiles = LinkedHashMap<String, AppProfile>()
         for (line in lines.drop(1)) {
             val parts = line.split('|')
-            if (parts.size != 3 || parts[0].isEmpty()) continue
+            if ((parts.size != 3 && parts.size != 5) || parts[0].isEmpty()) continue
             val up = decodeKey(parts[1]) ?: continue
             val down = decodeKey(parts[2]) ?: continue
-            val profile = AppProfile(volumeUp = up, volumeDown = down)
+            // ドラッグの形が読めなくても、プロファイルは捨てない（既定値で動くので危険側に転ばない）。
+            val profile = AppProfile(
+                volumeUp = up,
+                volumeDown = down,
+                dragPortrait = parts.getOrNull(3)?.let(::decodeLane),
+                dragLandscape = parts.getOrNull(4)?.let(::decodeLane),
+            )
             if (parts[0] == DEFAULT_KEY) defaultProfile = profile else profiles[parts[0]] = profile
         }
         return Decoded(defaultProfile, profiles)
@@ -58,6 +70,11 @@ object ProfileCodec {
         append(key).append('|')
         append(encodeKey(profile.volumeUp)).append('|')
         append(encodeKey(profile.volumeDown))
+        // 未調整なら v0.11.0 と同じ 3 欄のまま書く。
+        if (profile.dragPortrait != null || profile.dragLandscape != null) {
+            append('|').append(encodeLane(profile.dragPortrait))
+            append('|').append(encodeLane(profile.dragLandscape))
+        }
         appendLine()
     }
 
@@ -68,6 +85,17 @@ object ProfileCodec {
         setting.tapLandscape?.ratioX.str(),
         setting.tapLandscape?.ratioY.str(),
     ).joinToString(",")
+
+    private fun encodeLane(lane: DragLane?): String = lane?.let {
+        listOf(it.x, it.amount, it.forwardFrom, it.backwardFrom).joinToString(",")
+    }.orEmpty()
+
+    private fun decodeLane(text: String): DragLane? {
+        val v = text.split(',').map { it.toFloatOrNull() ?: return null }
+        if (v.size != 4) return null
+        return DragLane(x = v[0], amount = v[1], forwardFrom = v[2], backwardFrom = v[3])
+            .takeIf { it.isValid }
+    }
 
     private fun Float?.str(): String = this?.toString().orEmpty()
 

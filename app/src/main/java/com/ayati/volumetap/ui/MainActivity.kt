@@ -7,8 +7,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.accessibilityservice.AccessibilityServiceInfo
-import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -48,7 +46,6 @@ import com.ayati.volumetap.R
 import com.ayati.volumetap.data.AppProfile
 import com.ayati.volumetap.data.AppSettings
 import com.ayati.volumetap.data.SettingsRepository
-import com.ayati.volumetap.service.VolumeTapService
 import kotlinx.coroutines.launch
 
 /**
@@ -106,7 +103,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        serviceEnabled.value = isServiceEnabled()
+        serviceEnabled.value = isVolumeTapServiceEnabled()
         powerRestricted.value = isPowerRestricted()
     }
 
@@ -137,14 +134,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** ユーザー補助サービスが有効かどうか。設定アプリから戻るたびに評価し直す。 */
-    private fun isServiceEnabled(): Boolean {
-        val manager = getSystemService(AccessibilityManager::class.java) ?: return false
-        val target = "$packageName/${VolumeTapService::class.java.name}"
-        return manager
-            .getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-            .any { it.id == target || it.id.startsWith("$packageName/") }
-    }
 
     private fun openAccessibilitySettings() {
         startActivity(
@@ -289,6 +278,13 @@ private fun ProfileRow(app: InstalledApp?, label: String, profile: AppProfile, o
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (profile.usesDrag && (profile.dragPortrait != null || profile.dragLandscape != null)) {
+                Text(
+                    text = stringResource(R.string.drag_lane_tuned_badge),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }

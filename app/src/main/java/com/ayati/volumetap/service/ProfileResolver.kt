@@ -1,6 +1,7 @@
 package com.ayati.volumetap.service
 
 import com.ayati.volumetap.data.AppSettings
+import com.ayati.volumetap.data.DragLane
 import com.ayati.volumetap.data.KeyAction
 import com.ayati.volumetap.data.ScreenOrientation
 
@@ -13,24 +14,10 @@ sealed interface ResolvedAction {
 }
 
 /**
- * ドラッグの形（design-pageturn.md §5.1・§5.2）。Redmi Note 15 5G での試作で決めた値。
- *
- * 送りと戻しの移動量は必ず揃える（どちらも画面高の 63%）。揃っていないと、
- * 送って戻すたびに位置がずれていく。
+ * ドラッグの時間（design-pageturn.md §5.1）。Redmi Note 15 5G での試作で決めた値。
+ * 位置と送り量はアプリごとに調整できる（[DragLane]、§7.3）が、時間は利用者に見せない。
  */
 object DragGeometry {
-    const val X = 0.5f
-
-    const val FORWARD_FROM = 0.80f
-    const val FORWARD_TO = 0.17f
-
-    /**
-     * 戻しの始点は上に寄せすぎない。X は上へ戻すとヘッダーと「新しいポスト」ボタンが現れ、
-     * 0.20 ではそのボタンの上から始まって 2 回目以降の戻しが効かなくなった。
-     */
-    const val BACKWARD_FROM = 0.28f
-    const val BACKWARD_TO = 0.91f
-
     /** 移動にかける時間。短すぎると 1 回の移動イベントが大きくなり取りこぼすアプリがある。 */
     const val MOVE_MS = 250L
 
@@ -50,33 +37,44 @@ object DragGeometry {
  */
 object ProfileResolver {
 
+    /**
+     * @param calibration 調整中の値（§7.3.6）。前面が調整中のアプリで、向きも同じときだけ、
+     *   保存値の代わりに使う。
+     */
     fun resolve(
         settings: AppSettings,
         foreground: String?,
         ownPackage: String,
         key: VolumeKey,
         orientation: ScreenOrientation,
+        calibration: CalibrationOverride? = null,
     ): ResolvedAction? {
         // クイック設定タイルからの一時停止。最優先で素通しする。
         if (settings.paused) return null
         // 自アプリの設定画面・座標登録画面では介入しない。
         if (foreground == ownPackage) return null
 
-        val setting = settings.profileFor(foreground).settingFor(key)
+        val profile = settings.profileFor(foreground)
+        val setting = profile.settingFor(key)
+        val lane = calibration
+            ?.takeIf { it.packageName == foreground && it.orientation == orientation }
+            ?.lane
+            ?: profile.dragLaneFor(orientation)
         return when (setting.action) {
             KeyAction.NORMAL -> null
             // 座標が未登録なら素通し（設計書 §5.1 条件 3）。
             KeyAction.TAP -> setting.tapPointFor(orientation)?.let {
                 ResolvedAction.Tap(it.ratioX, it.ratioY)
             }
-            KeyAction.DRAG_FORWARD -> ResolvedAction.Drag(
-                DragGeometry.X, DragGeometry.FORWARD_FROM,
-                DragGeometry.X, DragGeometry.FORWARD_TO,
-            )
-            KeyAction.DRAG_BACKWARD -> ResolvedAction.Drag(
-                DragGeometry.X, DragGeometry.BACKWARD_FROM,
-                DragGeometry.X, DragGeometry.BACKWARD_TO,
-            )
+            KeyAction.DRAG_FORWARD -> ResolvedAction.Drag(lane.x, lane.forwardFrom, lane.x, lane.forwardTo)
+            KeyAction.DRAG_BACKWARD -> ResolvedAction.Drag(lane.x, lane.backwardFrom, lane.x, lane.backwardTo)
         }
     }
 }
+
+/** 調整中のドラッグの形（design-pageturn.md §7.3.6）。 */
+data class CalibrationOverride(
+    val packageName: String,
+    val orientation: ScreenOrientation,
+    val lane: DragLane,
+)

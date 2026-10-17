@@ -119,4 +119,59 @@ class ProfileCodecTest {
         assertEquals(mapOf(chrome to tapProfile, reader to tapProfile), migrated.profiles)
         assertTrue(migrated.defaultProfile.isPassThrough)
     }
+
+    // --- ドラッグの形（design-pageturn.md §7.3.3） ---
+
+    private val tuned = DragLane(x = 0.7f, amount = 0.58f, forwardFrom = 0.82f, backwardFrom = 0.32f)
+
+    @Test
+    fun `ドラッグの形も書いて読むと元に戻る`() {
+        val profiles = mapOf(
+            chrome to AppProfile.NEW_APP.copy(dragPortrait = tuned),
+            reader to AppProfile.NEW_APP.copy(dragLandscape = tuned),
+            "x" to AppProfile.NEW_APP.copy(dragPortrait = tuned, dragLandscape = DragLane.DEFAULT),
+        )
+        val decoded = ProfileCodec.decode(ProfileCodec.encode(AppProfile(), profiles))!!
+        assertEquals(profiles, decoded.profiles)
+    }
+
+    @Test
+    fun `未調整なら v0_11_0 と同じ 3 欄で書く`() {
+        val text = ProfileCodec.encode(AppProfile(), mapOf(chrome to AppProfile.NEW_APP))
+        val line = text.lines().first { it.startsWith(chrome) }
+        assertEquals(3, line.split('|').size)
+    }
+
+    @Test
+    fun `調整したアプリは 5 欄で書く`() {
+        val text = ProfileCodec.encode(AppProfile(), mapOf(chrome to AppProfile.NEW_APP.copy(dragPortrait = tuned)))
+        val line = text.lines().first { it.startsWith(chrome) }
+        assertEquals("com.android.chrome|DRAG_BACKWARD,,,,|DRAG_FORWARD,,,,|0.7,0.58,0.82,0.32|", line)
+    }
+
+    @Test
+    fun `v0_11_0 の形式（3 欄）をそのまま読める`() {
+        val decoded = ProfileCodec.decode("v1\n*|NORMAL,,,,|NORMAL,,,,\n$chrome|DRAG_BACKWARD,,,,|DRAG_FORWARD,,,,\n")!!
+        assertEquals(AppProfile.NEW_APP, decoded.profiles[chrome])
+    }
+
+    @Test
+    fun `壊れたドラッグの欄はその向きだけ未調整にしてプロファイルは残す`() {
+        val decoded = ProfileCodec.decode(
+            "v1\n$chrome|DRAG_BACKWARD,,,,|DRAG_FORWARD,,,,|0.7,0.58,abc,0.32|0.5,0.5,0.75,0.25\n" +
+                // 終点が画面の外に出る値・送り量が下限未満の値も読み捨てる。
+                "$reader|NORMAL,,,,|DRAG_FORWARD,,,,|0.5,0.9,0.8,0.2|0.5,0.1,0.8,0.2\n",
+        )!!
+        assertEquals(
+            AppProfile.NEW_APP.copy(dragLandscape = DragLane(0.5f, 0.5f, 0.75f, 0.25f)),
+            decoded.profiles[chrome],
+        )
+        assertEquals(AppProfile(volumeDown = KeySetting(KeyAction.DRAG_FORWARD)), decoded.profiles[reader])
+    }
+
+    @Test
+    fun `欄の数が 3 でも 5 でもない行は読み飛ばす`() {
+        val decoded = ProfileCodec.decode("v1\n$chrome|DRAG_BACKWARD,,,,|DRAG_FORWARD,,,,|0.7,0.58,0.82,0.32\n")!!
+        assertNull(decoded.profiles[chrome])
+    }
 }
