@@ -54,12 +54,26 @@ data class DragLane(
     }
 
     /**
-     * 送り量を変える（送り・戻しの両方に効く）。始点は動かさず、
-     * どちらの終点も画面に収まる範囲に丸める。
+     * 送り量を変える（送り・戻しの両方に効く）。調整している向きの始点は動かさない。
+     *
+     * もう一方の線が画面からはみ出すときは、**もう一方の始点を押して**収める。
+     * 押さずに止めると、送りを調整しているのに戻しの始点（既定 0.28）のせいで
+     * 送り量が 72% で頭打ちになる（2026-10-17 実機で指摘）。押す先は指を置ける範囲まで。
+     *
+     * @param editingForward 送りの線を調整しているか。
      */
-    fun withAmount(value: Float): DragLane {
-        val max = maxOf(AMOUNT_MIN, minOf(forwardFrom, 1f - backwardFrom))
-        return copy(amount = value.coerceIn(AMOUNT_MIN, max))
+    fun withAmount(
+        value: Float,
+        startRange: ClosedFloatingPointRange<Float>,
+        editingForward: Boolean,
+    ): DragLane = if (editingForward) {
+        val max = maxOf(AMOUNT_MIN, minOf(forwardFrom, 1f - startRange.start))
+        val a = value.coerceIn(AMOUNT_MIN, max)
+        copy(amount = a, backwardFrom = minOf(backwardFrom, 1f - a))
+    } else {
+        val max = maxOf(AMOUNT_MIN, minOf(1f - backwardFrom, startRange.endInclusive))
+        val a = value.coerceIn(AMOUNT_MIN, max)
+        copy(amount = a, forwardFrom = maxOf(forwardFrom, a))
     }
 
     companion object {

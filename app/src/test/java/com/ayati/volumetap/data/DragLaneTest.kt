@@ -45,31 +45,52 @@ class DragLaneTest {
 
     @Test
     fun `始点はシステムジェスチャ領域に入らない`() {
-        val small = DragLane.DEFAULT.withAmount(0.3f)
+        val small = DragLane.DEFAULT.withAmount(0.3f, range, editingForward = true)
         assertEquals(0.94f, small.withForwardFrom(0.99f, range).forwardFrom, eps)
         assertEquals(0.07f, small.withBackwardFrom(0.01f, range).backwardFrom, eps)
     }
 
     @Test
     fun `送り量は下限を下回らない`() {
-        assertEquals(DragLane.AMOUNT_MIN, DragLane.DEFAULT.withAmount(0.05f).amount, eps)
+        assertEquals(DragLane.AMOUNT_MIN, DragLane.DEFAULT.withAmount(0.05f, range, true).amount, eps)
+        assertEquals(DragLane.AMOUNT_MIN, DragLane.DEFAULT.withAmount(0.05f, range, false).amount, eps)
     }
 
     @Test
-    fun `送り量はどちらの終点も画面に収まる範囲まで増やせる`() {
-        // 送りの始点 0.94 から上端まで、戻しの始点 0.06 から下端まで。
-        val lane = DragLane(0.5f, 0.5f, 0.94f, 0.07f).withAmount(1f)
-        assertEquals(0.93f, lane.amount, eps)
-        assertEquals(0.01f, lane.forwardTo, eps)
+    fun `送りを伸ばすと戻しの始点を押し上げて 72 パーセントで頭打ちにならない`() {
+        val lane = DragLane.DEFAULT.withAmount(0.78f, range, editingForward = true)
+        assertEquals(0.78f, lane.amount, eps)
+        assertEquals(0.80f, lane.forwardFrom, eps)
+        assertEquals(0.22f, lane.backwardFrom, eps)
         assertEquals(1f, lane.backwardTo, eps)
         assertTrue(lane.isValid)
     }
 
     @Test
-    fun `送り量の上限は近いほうの終点で決まる`() {
-        val lane = DragLane.DEFAULT.withAmount(1f)
-        // 送りの始点 0.80 → 上端まで 0.80、戻しの始点 0.28 → 下端まで 0.72。
-        assertEquals(0.72f, lane.amount, eps)
+    fun `送りの上限は送りの始点から上端まで`() {
+        val lane = DragLane.DEFAULT.withForwardFrom(0.94f, range).withAmount(1f, range, editingForward = true)
+        assertEquals(0.93f, lane.amount, eps)
+        assertEquals(0.01f, lane.forwardTo, eps)
+        // 戻しの始点は指を置ける範囲の上端まで押される。
+        assertEquals(0.07f, lane.backwardFrom, eps)
+        assertTrue(lane.isValid)
+    }
+
+    @Test
+    fun `戻しを伸ばすと送りの始点を押し下げる`() {
+        val lane = DragLane.DEFAULT.withBackwardFrom(0.1f, range).withAmount(0.85f, range, editingForward = false)
+        assertEquals(0.85f, lane.amount, eps)
+        assertEquals(0.1f, lane.backwardFrom, eps)
+        assertEquals(0.85f, lane.forwardFrom, eps)
+        assertEquals(0f, lane.forwardTo, eps)
+        assertTrue(lane.isValid)
+    }
+
+    @Test
+    fun `押さなくて済むときはもう一方の始点を動かさない`() {
+        val lane = DragLane.DEFAULT.withAmount(0.5f, range, editingForward = true)
+        assertEquals(DragLane.DEFAULT.backwardFrom, lane.backwardFrom, eps)
+        assertEquals(DragLane.DEFAULT.forwardFrom, DragLane.DEFAULT.withAmount(0.5f, range, false).forwardFrom, eps)
     }
 
     @Test

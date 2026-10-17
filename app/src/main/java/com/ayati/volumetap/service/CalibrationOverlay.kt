@@ -492,8 +492,11 @@ class CalibrationOverlay(
                                 }
                             }
                             // 終点：送り量だけが変わる。
+                            // もう一方の線がはみ出すなら、その始点を押して収める。
                             Grab.END -> lane.withAmount(
                                 if (direction == DragDirection.FORWARD) lane.forwardFrom - ry else ry - lane.backwardFrom,
+                                startRange,
+                                editingForward = direction == DragDirection.FORWARD,
                             )
                         }
                         if (next != lane) listener.onLaneChanged(next)
