@@ -228,6 +228,16 @@ class CalibrationOverlay(
             setOnClickListener { onClick() }
         }
 
+    /** 幅に合わせて文字を縮める（最小 10sp）ボタン。 */
+    private fun fittingButton(textRes: Int, onClick: () -> Unit): Button =
+        button(textRes, onClick).apply {
+            minWidth = 0
+            minimumWidth = 0
+            maxLines = 1
+            setPadding(dp(4), paddingTop, dp(4), paddingBottom)
+            setAutoSizeTextTypeUniformWithConfiguration(10, 16, 1, TypedValue.COMPLEX_UNIT_SP)
+        }
+
     private fun dp(v: Int): Int = (v * service.resources.displayMetrics.density).roundToInt()
 
     /**
@@ -307,12 +317,20 @@ class CalibrationOverlay(
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                     setText(R.string.calibration_hint)
                 })
+                // 4 つを等分に並べ、文字が大きい端末では縮めて 1 行に収める
+                // （表示サイズ 1.25 倍で「保存」が画面外にはみ出した）。
                 addView(LinearLayout(context).apply {
-                    addView(button(R.string.calibration_test) { listener.onTest() })
-                    addView(button(R.string.calibration_reset) { listener.onReset() })
-                    addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
-                    addView(button(R.string.calibration_cancel) { listener.onCancel() })
-                    addView(button(R.string.calibration_save) { listener.onSave() })
+                    for ((res, action) in listOf(
+                        R.string.calibration_test to { listener.onTest() },
+                        R.string.calibration_reset to { listener.onReset() },
+                        R.string.calibration_cancel to { listener.onCancel() },
+                        R.string.calibration_save to { listener.onSave() },
+                    )) {
+                        addView(
+                            fittingButton(res, action),
+                            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+                        )
+                    }
                 })
             }
             // 後に足したものが上に来る。つまみのタッチを操作パネルより優先する。

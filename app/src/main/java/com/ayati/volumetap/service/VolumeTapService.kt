@@ -25,6 +25,7 @@ import com.ayati.volumetap.data.AppSettings
 import com.ayati.volumetap.data.DragLane
 import com.ayati.volumetap.data.ScreenOrientation
 import com.ayati.volumetap.data.SettingsRepository
+import com.ayati.volumetap.ui.ProfileEditActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -287,12 +288,30 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         }
     }
 
-    private fun closeCalibration(messageRes: Int?) {
+    /**
+     * @param returnToSettings 「保存」「やめる」を押したときは、そのアプリの設定画面に戻す。
+     *   対象アプリに残すと、Chrome では戻る操作が前のページへの移動になり、volumetap に
+     *   戻りにくい。対象アプリから離れた・向きが変わったなど、利用者が自分で動いた場面では戻さない。
+     */
+    private fun closeCalibration(messageRes: Int?, returnToSettings: Boolean = false) {
         Log.i(TAG, "calibration closed")
+        val target = calibration.target
         calibration.close()
         overlay.hide()
         handler.removeCallbacksAndMessages(WAIT_TOKEN)
         messageRes?.let { Toast.makeText(this, it, Toast.LENGTH_SHORT).show() }
+        if (returnToSettings && target != null) {
+            // ユーザー補助サービスは、裏からの Activity 起動の制限を受けない。
+            runCatching {
+                startActivity(
+                    ProfileEditActivity.intent(this, target).addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                    ),
+                )
+            }.onFailure { Log.w(TAG, "failed to return to settings", it) }
+        }
     }
 
     private fun appLabel(pkg: String): String = try {
@@ -318,7 +337,7 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
             overlay.showAdjust(lane, calibration.direction, ScreenMetrics.dragStartRange(this@VolumeTapService))
         }
 
-        override fun onCancel() = closeCalibration(null)
+        override fun onCancel() = closeCalibration(null, returnToSettings = true)
 
         override fun onSave() {
             val target = calibration.target ?: return
@@ -328,7 +347,7 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
                 repository.updateProfile(target) { it.withDragLane(orientation, lane) }
             }
             Log.i(TAG, "calibration saved: $target $orientation $lane")
-            closeCalibration(R.string.calibration_saved)
+            closeCalibration(R.string.calibration_saved, returnToSettings = true)
         }
 
         override fun onTest() {

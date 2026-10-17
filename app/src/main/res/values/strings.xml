@@ -109,7 +109,7 @@
     <string name="calibration_forward">送り ↑</string>
     <string name="calibration_backward">戻し ↓</string>
     <string name="calibration_amount">送り量 %1$d%%</string>
-    <string name="calibration_hint">○ 始点をつかむと線ごと動き、● 終点をつかむと送り量が変わります（送りと戻しで共通。足りなければ、もう一方の始点も動きます）。表示されている範囲より大きく送ると、行を読み飛ばします。</string>
+    <string name="calibration_hint">○ 始点で線ごと動かし、● 終点で送り量（送り・戻しで共通）を変えます。表示範囲より大きく送ると、読み飛ばしが起きます。</string>
     <string name="calibration_test">試す</string>
     <string name="calibration_reset">既定に戻す</string>
     <string name="calibration_save">保存</string>
