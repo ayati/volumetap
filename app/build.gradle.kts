@@ -21,8 +21,8 @@ android {
         applicationId = "com.ayati.volumetap"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.11.0"
+        versionCode = 5
+        versionName = "0.12.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
