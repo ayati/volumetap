@@ -1,10 +1,15 @@
 package com.ayati.volumetap.ui
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.accessibility.AccessibilityManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -63,6 +68,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val serviceEnabled = mutableStateOf(false)
+    private val powerRestricted = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,7 +81,9 @@ class MainActivity : ComponentActivity() {
                 SettingsScreen(
                     settings = settings,
                     serviceEnabled = serviceEnabled.value,
+                    powerRestricted = powerRestricted.value,
                     onOpenAccessibilitySettings = ::openAccessibilitySettings,
+                    onOpenAppInfo = ::openAppInfo,
                     onActionChange = { key, action ->
                         lifecycleScope.launch { repository.setAction(key, action) }
                     },
@@ -108,6 +116,34 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         serviceEnabled.value = isServiceEnabled()
+        powerRestricted.value = isPowerRestricted()
+    }
+
+    /**
+     * HyperOS / MIUI の省電力機能にサービスを凍結されうる状態か（設計書 §8）。
+     *
+     * Xiaomi 端末は裏に回ったプロセスを数秒で凍結し、そのあいだ音量キーが届かない。
+     * アプリ情報の「バッテリーセーバー：制限なし」で防げる。この設定は Android 標準の
+     * 省電力除外にも反映されるため、[PowerManager.isIgnoringBatteryOptimizations] で判定できる。
+     * 「自動起動」は公開 API で読めないので判定に含めない。
+     */
+    private fun isPowerRestricted(): Boolean {
+        if (!Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) return false
+        val power = getSystemService(PowerManager::class.java) ?: return false
+        return !power.isIgnoringBatteryOptimizations(packageName)
+    }
+
+    /** アプリ情報画面。HyperOS ではここにバッテリーセーバーと自動起動がある。 */
+    private fun openAppInfo() {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", packageName, null),
+        )
+        try {
+            startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.open_app_info_failed, Toast.LENGTH_SHORT).show()
+        }
     }
 
     /** ユーザー補助サービスが有効かどうか。設定アプリから戻るたびに評価し直す。 */
@@ -132,7 +168,9 @@ class MainActivity : ComponentActivity() {
 private fun SettingsScreen(
     settings: AppSettings,
     serviceEnabled: Boolean,
+    powerRestricted: Boolean,
     onOpenAccessibilitySettings: () -> Unit,
+    onOpenAppInfo: () -> Unit,
     onActionChange: (VolumeKey, KeyAction) -> Unit,
     onLongPressChange: (Int) -> Unit,
     onHapticChange: (Boolean) -> Unit,
@@ -153,6 +191,9 @@ private fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // 省電力設定を変えると端末がアプリを強制停止し、ユーザー補助がオフになる。
+            // 「省電力設定 → ユーザー補助」の順に読めるよう、状態カードより上に置く。
+            if (powerRestricted) PowerRestrictionCard(onOpenAppInfo)
             ServiceStatusCard(serviceEnabled, onOpenAccessibilitySettings)
 
             SectionHeader(R.string.section_assignment)
@@ -225,6 +266,34 @@ private fun ServiceStatusCard(enabled: Boolean, onOpen: () -> Unit) {
             }
             Button(onClick = onOpen) {
                 Text(stringResource(R.string.open_accessibility_settings))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PowerRestrictionCard(onOpen: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.power_restriction_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.power_restriction_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Button(onClick = onOpen) {
+                Text(stringResource(R.string.open_app_info))
             }
         }
     }

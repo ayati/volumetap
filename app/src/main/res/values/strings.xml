@@ -13,6 +13,10 @@
     <string name="service_disabled_title">ユーザー補助が無効です</string>
     <string name="service_disabled_body">volumetap を使うには、端末の設定でユーザー補助サービスを有効にしてください。</string>
     <string name="service_enabled">ユーザー補助は有効です</string>
+    <string name="power_restriction_title">省電力の設定が必要です</string>
+    <string name="power_restriction_body">この端末では、省電力機能が裏で動く volumetap を止めてしまい、ボリュームキーがときどき効かなくなります。\n\n次の 2 つを設定してください。\n・アプリ情報の「電源」で、バッテリーセーバーを「制限なし」にする\n・端末の設定 →「アプリ」→ 画面上部の「バックグラウンドでの自動起動」で、volumetap をオンにする\n\n設定を変えると、ユーザー補助がいったんオフになります。設定が済んだら、ユーザー補助を有効にし直してください。</string>
+    <string name="open_app_info">アプリ情報を開く</string>
+    <string name="open_app_info_failed">アプリ情報を開けませんでした</string>
     <string name="open_accessibility_settings">設定を開く</string>
     <string name="model_hint">短押し＝タップ / 長押し＝音量</string>
     <string name="volume_up_section">音量 ＋ の短押し</string>
