@@ -12,6 +12,10 @@
 >
 > **v0.13.0 で、タップ座標も対象アプリの上で登録できるようにした**（`design-pageturn.md` §7.3.7.1）。
 > §6.2 の白い全画面での登録は残している。
+>
+> **v0.14.0 で、英語・中国語（簡体字・繁体字）に対応した**（`design-i18n.md`）。既定の言語は英語
+> （`res/values/`）、日本語は `res/values-ja/`。**文字列を足すときは 4 言語を同時に足す**
+> （足し忘れは lint と `StringResourcesTest` で止まる）。訳語は `design-i18n.md` §6.1 の用語集に合わせる。
 
 - パッケージ名: `com.ayati.volumetap`
 - ライセンス: MIT（yomikake に準拠）／名称・アイコンは対象外（§13.1）
@@ -947,6 +951,7 @@ val THIRD_PARTY_LIBRARIES = listOf(
 - [ ] MIT / Apache-2.0 の全文が APK に同梱されている
 - [ ] APK が署名済み（v2 + v3）
 - [ ] 署名鍵の指紋が `release-fingerprint.txt` と一致する
+- [ ] `locale_config` が en・ja・zh-Hans・zh-Hant の 4 つ（`design-i18n.md` §7.1）
 
 > ⚠️ リリースビルドはリソースパスを短縮するため、ライセンス全文は
 > `res/raw/license_*.txt` ではなく `res/0M.txt` のような名前になる。

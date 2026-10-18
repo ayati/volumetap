@@ -50,6 +50,18 @@ echo "$found" | grep -v '^COUNT=' || true
 check "MIT / Apache-2.0 の全文が同梱されている" ok "$lic"
 
 echo
+echo "== 対応言語（design-i18n.md §7.1） =="
+# リリースビルドはリソースパスを短縮するので、locale_config の実際のパスを resources から引く。
+lc_path=$("$BT/aapt2" dump resources "$APK" | grep -A1 "xml/_generated_res_locale_config" | grep -o 'res/[^ ]*' | head -1 || true)
+locales=""
+if [ -n "$lc_path" ]; then
+    locales=$("$BT/aapt2" dump xmltree --file "$lc_path" "$APK" | grep ':name(' | grep -o '"[a-zA-Z-]*" (Raw' | tr -d '"' | awk '{print $1}' | sort | tr '\n' ' ')
+fi
+echo "     locale_config: ${locales:-（無い）}"
+[ "$locales" = "en ja zh-Hans zh-Hant " ] && loc=ok || loc=ng
+check "locale_config が en・ja・zh-Hans・zh-Hant の 4 つ" ok "$loc"
+
+echo
 echo "== 依存とライセンス一覧の整合 =="
 deps=$(grep -cE '^\s+implementation\(libs\.' app/build.gradle.kts)
 listed=$(grep -c '^    LibraryNotice(' app/src/main/java/com/ayati/volumetap/data/ThirdPartyLicenses.kt)

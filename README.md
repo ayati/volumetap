@@ -1,5 +1,20 @@
 # volumetap
 
+**English** — volumetap is an Android app that turns a short press of a volume button into
+a one-screen scroll, or a tap at a position you set. A long press still adjusts the volume.
+It is meant for reading web pages, timelines and e-books without touching the screen.
+No ads, no purchases, open source, and no `INTERNET` permission.
+The app is available in English, Japanese and Chinese (Simplified and Traditional).
+See [Translations](#translations--翻訳について) below.
+
+**简体中文** — 短按音量键即可逐屏滚动屏幕，或点击设置好的位置；长按仍为音量调节。
+无广告、无付费、开源、不联网。
+
+**繁體中文** — 短按音量鍵即可逐頁捲動畫面，或輕觸設定好的位置；長按仍為音量調整。
+無廣告、無付費、開放原始碼、不連網。
+
+---
+
 ボリュームボタンの短押しで、画面を 1 画面ずつスクロールする Android アプリ。
 設定した位置をタップすることもできます。長押しは本来の音量調整のまま。
 
@@ -197,7 +212,29 @@ f3d9d749857baa6b402f09c475a6c679fcb861bb2bb447430aae4c340bf37d40
 設計の詳細は [design.md](design.md)、変更履歴は [CHANGELOG.md](CHANGELOG.md)、
 アイコンは [icon/README.md](icon/README.md) を参照。
 
+## Translations / 翻訳について
+
+**English** — The app's English and Chinese text was written by a non-native speaker and
+includes machine translation. Corrections and suggestions for more natural wording are very welcome.
+Please open a [GitHub issue](https://github.com/ayati/volumetap/issues) (or email ayaticom@gmail.com)
+with the screen where you saw the text and the wording you would suggest.
+
+**简体中文** — 本应用的中文由非母语者编写，包含机器翻译。非常欢迎指出错误或不自然的表达。
+请在 [GitHub Issue](https://github.com/ayati/volumetap/issues)（或发邮件至 ayaticom@gmail.com）中
+告诉我们出现该文字的画面，以及您建议的表达。
+
+**繁體中文** — 本應用程式的中文由非母語者撰寫，包含機器翻譯。非常歡迎指出錯誤或不自然的表達。
+請在 [GitHub Issue](https://github.com/ayati/volumetap/issues)（或寄信至 ayaticom@gmail.com）中
+告訴我們出現該文字的畫面，以及您建議的表達。
+
+**日本語** — 英語・中国語の表示は、母語話者ではない開発者が書いたもので、機械的な翻訳を含みます。
+誤りや不自然な表現のご指摘を歓迎します。[GitHub の Issue](https://github.com/ayati/volumetap/issues)
+（またはメール ayaticom@gmail.com）で、その文言が出た画面と、望ましい表現をお知らせください。
+
 ## コントリビューション
+
+**画面の文言を足すときは、英語（`values/`）・日本語（`values-ja/`）・簡体字（`values-b+zh+Hans/`）・
+繁体字（`values-b+zh+Hant/`）の 4 つに同時に足してください。** 足し忘れは lint と単体テストで止まります。
 
 **依存ライブラリを追加したら、`ThirdPartyLicenses.kt` の `THIRD_PARTY_LIBRARIES` に
 1 行追加してください。** アプリ内のライセンス表示画面はこのリストから生成されており、

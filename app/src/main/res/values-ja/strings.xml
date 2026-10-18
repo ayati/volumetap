@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  日本語。design-i18n.md §3.1。既定の言語（values/）は英語。
+  訳さない文字列（app_name・copyright・座標の書式）は values/ にだけ置く。
+-->
+<resources>
+    <!--
+      ユーザー補助の一覧と Play 審査で参照される説明文。
+      isAccessibilityTool="true" の宣言と齟齬がないよう、補助ツールとしての用途を明示する。
+    -->
+    <string name="accessibility_service_summary">ボリュームキーで画面のタップやスクロールを代替します</string>
+    <string name="accessibility_service_description">画面に触れるのが難しいときに、ボリュームキーの短押しで、画面を 1 画面ずつスクロールしたり、あらかじめ登録した位置をタップしたりできるようにします。片手持ちや寝転んでの読書、指の可動が制限される状況での操作を助けます。\n\nキーを長押ししたときは、これまでどおりの音量調整になります。\n\nこのアプリは画面に表示されている内容を読み取りません。インターネットに接続する権限も持たないため、情報が外部に送信されることはありません。</string>
+
+    <!-- 設定画面 -->
+    <string name="service_disabled_title">ユーザー補助が無効です</string>
+    <string name="service_disabled_body">volumetap を使うには、端末の設定でユーザー補助サービスを有効にしてください。</string>
+    <string name="service_enabled">ユーザー補助は有効です</string>
+    <string name="power_restriction_title">省電力の設定が必要です</string>
+    <string name="power_restriction_body">この端末では、省電力機能が裏で動く volumetap を止めてしまい、ボリュームキーがときどき効かなくなります。\n\n次の 2 つを設定してください。\n・アプリ情報の「電源」で、バッテリーセーバーを「制限なし」にする\n・端末の設定 →「アプリ」→ 画面上部の「バックグラウンドでの自動起動」で、volumetap をオンにする\n\n設定を変えると、ユーザー補助がいったんオフになります。設定が済んだら、ユーザー補助を有効にし直してください。\n\n（メニューの名前は端末によって違います。）</string>
+    <string name="open_app_info">アプリ情報を開く</string>
+    <string name="open_app_info_failed">アプリ情報を開けませんでした</string>
+    <string name="open_accessibility_settings">設定を開く</string>
+    <string name="model_hint">短押し＝ページ送り / 長押し＝音量</string>
+    <string name="volume_up_section">音量 ＋ の短押し</string>
+    <string name="volume_down_section">音量 − の短押し</string>
+    <string name="action_normal">本来の音量調整</string>
+    <string name="action_tap">指定位置をタップ</string>
+    <string name="action_drag_forward">ドラッグで次の画面へ送る</string>
+    <string name="action_drag_backward">ドラッグで前の画面へ戻す</string>
+    <string name="action_short_normal">音量</string>
+    <string name="action_short_tap">タップ</string>
+    <string name="action_short_forward">送る</string>
+    <string name="action_short_backward">戻す</string>
+    <string name="profile_summary">−：%1$s　＋：%2$s</string>
+    <string name="add_app">アプリを追加</string>
+    <string name="default_profile">その他のアプリ</string>
+    <string name="default_profile_hint">個別に追加していないアプリ（ホーム画面を含む）で使われます。ここでドラッグを選ぶと、ホーム画面や地図などでも画面が動いてしまうため、使うアプリを個別に追加するのがおすすめです。</string>
+    <string name="no_profiles_hint">まだアプリを追加していません。「アプリを追加」から、ページ送りに使うアプリを選んでください。</string>
+    <string name="drag_forward_hint">画面を下から上へなぞる操作で、次の 1 画面へスクロールします。</string>
+    <string name="drag_backward_hint">画面を上から下へなぞる操作で、前の 1 画面へ戻ります。一覧の先頭付近では、アプリによっては「引っ張って更新」が働き、一覧が読み込み直されることがあります。</string>
+    <string name="delete_profile">このアプリの割り当てを削除</string>
+    <string name="long_press_threshold">長押し判定（ミリ秒）</string>
+    <string name="haptic_feedback">触覚フィードバック</string>
+    <string name="tap_point_unregistered">座標が未登録のため、いまは音量調整のまま動作します</string>
+    <string name="tap_point_portrait">縦</string>
+    <string name="tap_point_landscape">横</string>
+    <string name="tap_point_none">未登録</string>
+    <string name="register">登録</string>
+    <string name="clear">解除</string>
+    <string name="register_hint">端末を縦にして登録すれば縦の座標、横にして登録すれば横の座標になります。</string>
+    <string name="register_on_app">%1$s の上で登録</string>
+    <string name="register_on_blank">白い画面で登録</string>
+    <string name="register_on_app_needs_service">ユーザー補助で volumetap を有効にすると、アプリの上で登録できます。</string>
+
+    <!-- 座標登録画面 -->
+    <string name="pick_prompt">タップさせたい位置を\nタップしてください</string>
+    <string name="pick_confirm_prompt">この位置でよければ「決定」</string>
+    <string name="pick_retry">やり直す</string>
+    <string name="pick_decide">決定</string>
+    <string name="cancel">キャンセル</string>
+
+    <!-- アプリの追加・誤爆防止 -->
+    <string name="app_picker_configured">設定済み</string>
+    <string name="app_picker_discover_hint">💡 Google Discover は「Google」を選んでください。ホーム画面の左に出る Discover も、Google アプリとして扱われます（「Google ニュース」は別のアプリです）。</string>
+    <string name="app_picker_pwa_hint">💡 PWA（ホーム画面に追加したウェブアプリ）はこの一覧に出ません。ブラウザ上で動くため、yomikake などを使う場合は Chrome などのブラウザを選んでください。</string>
+    <string name="pause">一時停止</string>
+    <string name="pause_body">一時停止中はボリュームキーが通常どおり動きます。クイック設定タイルからも切り替えられます。</string>
+    <string name="tile_running">動作中</string>
+    <string name="tile_paused">一時停止中</string>
+
+    <!-- 共通 -->
+    <string name="back">戻る</string>
+
+    <!-- このアプリについて（Phase 3） -->
+    <string name="about">このアプリについて</string>
+    <string name="version_format">バージョン %1$s (%2$d)</string>
+    <string name="about_tagline">ボリュームボタンの短押しで、画面を 1 画面ずつスクロールしたり、設定した位置をタップしたりします。長押しは本来の音量調整のままです。広告なし・課金なし・ネットワーク接続なし。</string>
+    <string name="repository">ソースコード（GitHub）</string>
+    <string name="privacy_policy">プライバシーポリシー</string>
+    <string name="about_license_note">コードは MIT ライセンスで公開しています。「volumetap」の名称およびアプリアイコンは MIT ライセンスの対象外です。</string>
+    <string name="no_browser">ブラウザが見つかりませんでした</string>
+
+    <!-- オープンソースライセンス（Phase 5） -->
+    <string name="licenses">オープンソースライセンス</string>
+    <string name="licenses_libraries">使用しているライブラリ</string>
+    <string name="name_and_icon_reserved">※「volumetap」の名称およびアプリアイコンは MIT ライセンスの対象外です。</string>
+    <string name="show_full_text">%1$s の全文を表示</string>
+    <string name="hide_full_text">%1$s の全文を隠す</string>
+
+    <!-- 設定画面の見出し -->
+    <string name="section_assignment">アプリごとの割り当て</string>
+    <string name="section_scope">動作する範囲</string>
+    <string name="section_advanced">詳細設定</string>
+
+    <!-- ドラッグの調整（design-pageturn.md §7.3） -->
+    <string name="drag_lane_section">ドラッグの位置と送り量</string>
+    <string name="drag_lane_portrait">縦持ち</string>
+    <string name="drag_lane_landscape">横持ち</string>
+    <string name="drag_lane_default">既定（送り量 %1$d%%）</string>
+    <string name="drag_lane_custom">調整済み（送り量 %1$d%%）</string>
+    <string name="drag_lane_same_as_portrait">縦持ちと同じ</string>
+    <string name="drag_lane_reset">既定に戻す</string>
+    <string name="drag_lane_tuned_badge">調整済み</string>
+    <string name="calibrate_on_app">%1$s の上で調整</string>
+    <string name="calibrate_hint">アプリを開き、実際の画面の上で位置と送り量を調整します。調整は、そのときの画面の向き（縦持ち・横持ち）に保存されます。</string>
+    <string name="calibrate_needs_service">ユーザー補助で volumetap を有効にすると、調整できます。</string>
+    <string name="calibrate_launch_failed">アプリを起動できませんでした</string>
+    <string name="calibration_band_text">%1$s のドラッグを調整します。長いページなど、調整したい画面を開いてから「始める」を押してください。</string>
+    <string name="calibration_begin">始める</string>
+    <string name="calibration_cancel">やめる</string>
+    <string name="calibration_forward">送り ↑</string>
+    <string name="calibration_backward">戻し ↓</string>
+    <string name="calibration_amount">送り量 %1$d%%</string>
+    <string name="calibration_hint">○ 始点で線ごと動かし、● 終点で送り量（送り・戻しで共通）を変えます。表示範囲より大きく送ると、読み飛ばしが起きます。</string>
+    <string name="calibration_test">試す</string>
+    <string name="calibration_reset">既定に戻す</string>
+    <string name="calibration_save">保存</string>
+    <string name="calibration_zone">ここからは指を置けません（ホーム・通知の操作になります）</string>
+    <string name="calibration_test_failed">うまく試せませんでした。もう一度「試す」を押してください。</string>
+    <string name="calibration_saved">ドラッグの調整を保存しました</string>
+    <string name="calibration_closed_left">アプリから離れたため、調整をやめました</string>
+    <string name="calibration_closed_rotated">画面の向きが変わったため、調整をやめました</string>
+    <string name="calibration_closed_screen_off">画面が消えたため、調整をやめました</string>
+
+    <!-- タップ位置の登録（design-pageturn.md §7.3.7.1） -->
+    <string name="calibration_key_up">音量 ＋</string>
+    <string name="calibration_key_down">音量 −</string>
+    <string name="calibration_tap_band_text">%1$s で、%2$s でタップする位置を登録します。押したいボタンのある画面を開いてから「始める」を押してください。</string>
+    <string name="calibration_tap_title">%1$s でタップする位置</string>
+    <string name="calibration_tap_hint">押したい位置をタップしてください。指を離さずに動かすと、細かく合わせられます。</string>
+    <string name="calibration_tap_saved">タップする位置を保存しました</string>
+</resources>

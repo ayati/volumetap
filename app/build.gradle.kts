@@ -17,6 +17,12 @@ android {
     namespace = "com.ayati.volumetap"
     compileSdk = 36
 
+    // 対応言語の一覧（locale_config）を values-* から作り、Android 13 以降の
+    // アプリごとの言語設定に出す（design-i18n.md §4.1）。values/ の言語は res/resources.properties。
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.ayati.volumetap"
         minSdk = 26

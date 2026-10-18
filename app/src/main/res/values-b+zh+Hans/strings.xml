@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  中国語（簡体字）。design-i18n.md §3.2・§6.1。
+  母語話者の確認はしていない（§6.5）。誤りの指摘を歓迎する。
+-->
+<resources>
+    <!-- ユーザー補助の説明文（design-i18n.md §6.3）。 -->
+    <string name="accessibility_service_summary">用音量键代替点击和滚动屏幕</string>
+    <string name="accessibility_service_description">适用于触摸屏幕有困难的情况：短按音量键，即可逐屏滚动屏幕，或点击预先设置的位置。适合单手持机、躺着阅读，或手指活动受限时使用。\n\n长按音量键时，仍像平常一样调节音量。\n\n本应用不会读取屏幕上显示的内容。本应用没有访问互联网的权限，因此不会向设备外发送任何信息。</string>
+
+    <!-- 設定画面 -->
+    <string name="service_disabled_title">无障碍服务未开启</string>
+    <string name="service_disabled_body">要使用 volumetap，请在设备设置中开启它的无障碍服务。</string>
+    <string name="service_enabled">无障碍服务已开启</string>
+    <string name="power_restriction_title">需要设置省电策略</string>
+    <!-- 端末の画面の名前は design-i18n.md §6.2.1 で実機から写したもの。 -->
+    <string name="power_restriction_body">在此设备上，省电功能会停止在后台运行的 volumetap，导致音量键有时失效。\n\n请完成以下两项设置：\n・在应用信息的“省电策略”中，选择“无限制”\n・在设备设置 →“应用设置”→ 页面上方的“后台启动”中，开启 volumetap\n\n更改设置后，无障碍服务会暂时关闭。设置完成后，请重新开启 volumetap 的无障碍服务。\n\n（菜单名称可能因设备而异。）</string>
+    <string name="open_app_info">打开应用信息</string>
+    <string name="open_app_info_failed">无法打开应用信息</string>
+    <string name="open_accessibility_settings">打开设置</string>
+    <string name="model_hint">短按＝翻页 / 长按＝音量</string>
+    <string name="volume_up_section">短按音量+</string>
+    <string name="volume_down_section">短按音量-</string>
+    <string name="action_normal">正常调节音量</string>
+    <string name="action_tap">点击指定位置</string>
+    <string name="action_drag_forward">滑动到下一屏</string>
+    <string name="action_drag_backward">滑动回到上一屏</string>
+    <string name="action_short_normal">音量</string>
+    <string name="action_short_tap">点击</string>
+    <string name="action_short_forward">下一屏</string>
+    <string name="action_short_backward">上一屏</string>
+    <string name="profile_summary">-：%1$s　+：%2$s</string>
+    <string name="add_app">添加应用</string>
+    <string name="default_profile">其他应用</string>
+    <string name="default_profile_hint">用于未单独添加的应用（包括主屏幕）。在这里选择滑动后，主屏幕、地图等也会被滚动，因此建议逐个添加要使用的应用。</string>
+    <string name="no_profiles_hint">尚未添加应用。请通过“添加应用”选择用于翻页的应用。</string>
+    <string name="drag_forward_hint">在屏幕上从下往上滑动，滚动到下一屏。</string>
+    <string name="drag_backward_hint">在屏幕上从上往下滑动，回到上一屏。在列表顶部附近，部分应用会把它当作“下拉刷新”，重新加载列表。</string>
+    <string name="delete_profile">删除此应用的设置</string>
+    <string name="long_press_threshold">长按判定时间（毫秒）</string>
+    <string name="haptic_feedback">触感反馈</string>
+    <string name="tap_point_unregistered">尚未设置位置，因此目前仍用于调节音量</string>
+    <string name="tap_point_portrait">竖屏</string>
+    <string name="tap_point_landscape">横屏</string>
+    <string name="tap_point_none">未设置</string>
+    <string name="register">设置位置</string>
+    <string name="clear">清除</string>
+    <string name="register_hint">竖着拿设备时设置的是竖屏位置，横着拿时设置的是横屏位置。</string>
+    <string name="register_on_app">在 %1$s 上设置</string>
+    <string name="register_on_blank">在空白屏幕上设置</string>
+    <string name="register_on_app_needs_service">在无障碍中开启 volumetap 后，即可在应用上设置。</string>
+
+    <!-- 座標登録画面 -->
+    <string name="pick_prompt">请点击\n希望音量键点击的位置</string>
+    <string name="pick_confirm_prompt">位置合适的话，请点“确定”</string>
+    <string name="pick_retry">重试</string>
+    <string name="pick_decide">确定</string>
+    <string name="cancel">取消</string>
+
+    <!-- アプリの追加・誤爆防止 -->
+    <string name="app_picker_configured">已设置</string>
+    <string name="app_picker_discover_hint">💡 使用 Google Discover 时，请选择“Google”。主屏幕左侧的 Discover 也属于 Google 应用（“Google 新闻”是另一个应用）。</string>
+    <string name="app_picker_pwa_hint">💡 PWA（添加到主屏幕的网页应用）不会出现在此列表中。它们在浏览器中运行，因此使用 yomikake 等时，请选择 Chrome 等浏览器。</string>
+    <string name="pause">暂停</string>
+    <string name="pause_body">暂停期间，音量键照常工作。也可以通过快捷设置图块切换。</string>
+    <string name="tile_running">运行中</string>
+    <string name="tile_paused">已暂停</string>
+
+    <!-- 共通 -->
+    <string name="back">返回</string>
+
+    <!-- このアプリについて -->
+    <string name="about">关于本应用</string>
+    <string name="version_format">版本 %1$s (%2$d)</string>
+    <string name="about_tagline">短按音量键，即可逐屏滚动屏幕，或点击设置好的位置。长按仍为正常的音量调节。无广告、无付费、不联网。</string>
+    <string name="repository">源代码（GitHub）</string>
+    <string name="privacy_policy">隐私政策（日文）</string>
+    <string name="about_license_note">代码以 MIT 许可证公开。“volumetap”名称及应用图标不在 MIT 许可证的范围内。</string>
+    <string name="no_browser">未找到浏览器</string>
+
+    <!-- オープンソースライセンス -->
+    <string name="licenses">开源许可</string>
+    <string name="licenses_libraries">使用的库</string>
+    <string name="name_and_icon_reserved">※“volumetap”名称及应用图标不在 MIT 许可证的范围内。</string>
+    <string name="show_full_text">显示 %1$s 全文</string>
+    <string name="hide_full_text">隐藏 %1$s 全文</string>
+
+    <!-- 設定画面の見出し -->
+    <string name="section_assignment">按应用设置</string>
+    <string name="section_scope">适用范围</string>
+    <string name="section_advanced">高级设置</string>
+
+    <!-- ドラッグの調整 -->
+    <string name="drag_lane_section">滑动位置与滚动距离</string>
+    <string name="drag_lane_portrait">竖屏</string>
+    <string name="drag_lane_landscape">横屏</string>
+    <string name="drag_lane_default">默认（滚动 %1$d%%）</string>
+    <string name="drag_lane_custom">已调整（滚动 %1$d%%）</string>
+    <string name="drag_lane_same_as_portrait">与竖屏相同</string>
+    <string name="drag_lane_reset">恢复默认</string>
+    <string name="drag_lane_tuned_badge">已调整</string>
+    <string name="calibrate_on_app">在 %1$s 上调整</string>
+    <string name="calibrate_hint">打开应用，在实际屏幕上调整位置和滚动距离。调整结果保存到当时的屏幕方向（竖屏或横屏）。</string>
+    <string name="calibrate_needs_service">在无障碍中开启 volumetap 后，即可调整。</string>
+    <string name="calibrate_launch_failed">无法打开应用</string>
+    <string name="calibration_band_text">正在调整 %1$s 的滑动。请先打开要调整的页面（例如较长的页面），再点“开始”。</string>
+    <string name="calibration_begin">开始</string>
+    <string name="calibration_cancel">取消</string>
+    <string name="calibration_forward">下一屏 ↑</string>
+    <string name="calibration_backward">上一屏 ↓</string>
+    <string name="calibration_amount">滚动 %1$d%%</string>
+    <string name="calibration_hint">○ 起点：整条线一起移动。● 终点：改变滚动距离（下一屏和上一屏共用）。滚动距离超过显示范围时，会跳过部分内容。</string>
+    <string name="calibration_test">测试</string>
+    <string name="calibration_reset">恢复默认</string>
+    <string name="calibration_save">保存</string>
+    <string name="calibration_zone">不能从这里开始（会触发主屏幕或通知手势）</string>
+    <string name="calibration_test_failed">测试未成功。请再点一次“测试”。</string>
+    <string name="calibration_saved">已保存滑动设置</string>
+    <string name="calibration_closed_left">已离开应用，调整已取消</string>
+    <string name="calibration_closed_rotated">屏幕方向已改变，调整已取消</string>
+    <string name="calibration_closed_screen_off">屏幕已关闭，调整已取消</string>
+
+    <!-- タップ位置の登録 -->
+    <string name="calibration_key_up">音量+</string>
+    <string name="calibration_key_down">音量-</string>
+    <string name="calibration_tap_band_text">正在设置 %2$s 在 %1$s 中点击的位置。请先打开包含要点击按钮的页面，再点“开始”。</string>
+    <string name="calibration_tap_title">%1$s 点击的位置</string>
+    <string name="calibration_tap_hint">请点击想要点击的位置。手指不离开屏幕并移动，可以微调位置。</string>
+    <string name="calibration_tap_saved">已保存点击位置</string>
+</resources>
