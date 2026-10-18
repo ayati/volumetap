@@ -26,7 +26,7 @@ See [Translations](#translations--翻訳について) below.
 ePub リーダー [yomikake](https://github.com/ayati/yomikake) のような、画面タップで
 ページを送るアプリにも使えます。
 
-> ⚠️ **ベータ版**です（v0.11.0）。テスターを募集しています。
+> ⚠️ **ベータ版**です（v0.14.0）。テスターを募集しています。
 
 ## 使い方
 
