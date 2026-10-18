@@ -107,7 +107,7 @@ class ProfileResolverTest {
             profiles = mapOf(chrome to AppProfile.NEW_APP),
             defaultProfile = AppProfile.NEW_APP,
         )
-        val calibrating = CalibrationOverride(chrome, ScreenOrientation.PORTRAIT, tuned)
+        val calibrating = CalibrationOverride.Lane(chrome, ScreenOrientation.PORTRAIT, tuned)
 
         assertEquals(forwardOf(tuned), resolve(settings, chrome, calibration = calibrating))
         assertEquals(backwardOf(tuned), resolve(settings, chrome, VolumeKey.UP, calibration = calibrating))
@@ -124,7 +124,7 @@ class ProfileResolverTest {
         val settings = AppSettings(
             profiles = mapOf(chrome to AppProfile(volumeDown = KeySetting(KeyAction.DRAG_FORWARD))),
         )
-        val calibrating = CalibrationOverride(chrome, ScreenOrientation.PORTRAIT, tuned)
+        val calibrating = CalibrationOverride.Lane(chrome, ScreenOrientation.PORTRAIT, tuned)
         assertNull(resolve(settings, chrome, VolumeKey.UP, calibration = calibrating))
     }
 
@@ -165,5 +165,50 @@ class ProfileResolverTest {
             ResolvedAction.Tap(0.15f, 0.5f),
             resolve(settings, chrome, orientation = ScreenOrientation.LANDSCAPE),
         )
+    }
+
+    @Test
+    fun `登録中のタップ位置は対象アプリで同じ向き 同じキーのときだけ使う`() {
+        val saved = TapPoint(0.9f, 0.5f, ScreenOrientation.PORTRAIT)
+        val tapBoth = AppProfile(
+            volumeDown = KeySetting(KeyAction.TAP, tapPortrait = saved),
+            volumeUp = KeySetting(KeyAction.TAP, tapPortrait = saved),
+        )
+        val settings = AppSettings(profiles = mapOf(chrome to tapBoth), defaultProfile = tapBoth)
+        val registering = CalibrationOverride.Tap(chrome, ScreenOrientation.PORTRAIT, VolumeKey.DOWN, 0.2f, 0.7f)
+        val savedTap = ResolvedAction.Tap(0.9f, 0.5f)
+
+        assertEquals(ResolvedAction.Tap(0.2f, 0.7f), resolve(settings, chrome, calibration = registering))
+        // もう一方のキー・別のアプリ・別の向きでは保存値のまま。
+        assertEquals(savedTap, resolve(settings, chrome, VolumeKey.UP, calibration = registering))
+        assertEquals(savedTap, resolve(settings, launcher, calibration = registering))
+        assertEquals(
+            savedTap,
+            resolve(settings, chrome, orientation = ScreenOrientation.LANDSCAPE, calibration = registering),
+        )
+    }
+
+    @Test
+    fun `座標が未登録でも登録中のしるしの位置でタップする`() {
+        val settings = AppSettings(
+            profiles = mapOf(chrome to AppProfile(volumeDown = KeySetting(KeyAction.TAP))),
+        )
+        val registering = CalibrationOverride.Tap(chrome, ScreenOrientation.PORTRAIT, VolumeKey.DOWN, 0.2f, 0.7f)
+        assertEquals(ResolvedAction.Tap(0.2f, 0.7f), resolve(settings, chrome, calibration = registering))
+    }
+
+    @Test
+    fun `タップの登録中もドラッグのキーは保存値で送る`() {
+        val settings = AppSettings(
+            profiles = mapOf(
+                chrome to AppProfile(
+                    volumeDown = KeySetting(KeyAction.TAP),
+                    volumeUp = KeySetting(KeyAction.DRAG_BACKWARD),
+                    dragPortrait = tuned,
+                ),
+            ),
+        )
+        val registering = CalibrationOverride.Tap(chrome, ScreenOrientation.PORTRAIT, VolumeKey.DOWN, 0.2f, 0.7f)
+        assertEquals(backwardOf(tuned), resolve(settings, chrome, VolumeKey.UP, calibration = registering))
     }
 }

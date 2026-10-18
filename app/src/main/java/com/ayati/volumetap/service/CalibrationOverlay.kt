@@ -28,6 +28,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.ayati.volumetap.R
 import com.ayati.volumetap.data.DragLane
+import com.ayati.volumetap.data.TapPoint
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -39,6 +40,7 @@ import kotlin.math.roundToInt
  *
  * - 待機：下端の小さな帯だけ。帯の外のタッチは下のアプリに届く
  * - 調整：画面全体に重ね、線とつまみを動かす。座標はディスプレイの実寸と一致する（§7.3.9.1）
+ * - タップ位置の登録：画面全体に重ね、十字のしるしを置く（§7.3.7.1）
  *
  * Compose ではなく View で組む。サービスのウィンドウで Compose を使うには Lifecycle などを
  * 自分で用意する必要があり、描くものも線と円とボタン数個なので。
@@ -56,6 +58,7 @@ class CalibrationOverlay(
         fun onReset()
         fun onSelectDirection(direction: DragDirection)
         fun onLaneChanged(lane: DragLane)
+        fun onPointChanged(x: Float, y: Float)
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -65,7 +68,11 @@ class CalibrationOverlay(
 
     private var root: View? = null
     private var params: WindowManager.LayoutParams? = null
-    private var adjust: AdjustView? = null
+
+    /** 全面の画面（調整・タップ位置の登録）。待機の帯のときは null。 */
+    private var screen: PanelScreen? = null
+    private val adjust: AdjustView? get() = screen as? AdjustView
+    private val tapScreen: TapView? get() = screen as? TapView
 
     /** 「試す」の最中か。最中は重ね表示がタッチを受け付けない。 */
     private var testing = false
@@ -77,8 +84,9 @@ class CalibrationOverlay(
 
     // --- 表示 -------------------------------------------------------------
 
-    fun showBand(appLabel: String) {
-        if (root != null && adjust == null) return
+    /** @param text 帯に出す説明。ドラッグの調整かタップ位置の登録かで変わる。 */
+    fun showBand(text: String) {
+        if (root != null && screen == null) return
         hide()
         val band = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -88,7 +96,7 @@ class CalibrationOverlay(
                 cornerRadius = dp(16).toFloat()
             }
             addView(TextView(context).apply {
-                text = service.getString(R.string.calibration_band_text, appLabel)
+                this.text = text
                 setTextColor(Color.WHITE)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             })
@@ -112,7 +120,7 @@ class CalibrationOverlay(
     fun showAdjust(lane: DragLane, direction: DragDirection, startRange: ClosedFloatingPointRange<Float>) {
         hide()
         val view = AdjustView(context, startRange)
-        adjust = view
+        screen = view
         add(view, baseParams(WindowManager.LayoutParams.MATCH_PARENT, fullScreen = true))
         view.update(lane, direction)
     }
@@ -121,12 +129,30 @@ class CalibrationOverlay(
         adjust?.update(lane, direction)
     }
 
+    /**
+     * タップ位置の登録の画面（§7.3.7.1）。
+     *
+     * @param point 登録済みの位置。未登録なら null（しるしを置くまで「試す」「保存」は押せない）。
+     * @param title どのキーの位置か（「音量 − でタップする位置」）。
+     */
+    fun showTap(point: TapPoint?, title: String) {
+        hide()
+        val view = TapView(context, title)
+        screen = view
+        add(view, baseParams(WindowManager.LayoutParams.MATCH_PARENT, fullScreen = true))
+        view.update(point)
+    }
+
+    fun updatePoint(point: TapPoint?) {
+        tapScreen?.update(point)
+    }
+
     fun hide() {
         handler.removeCallbacksAndMessages(null)
         root?.let { runCatching { wm.removeView(it) } }
         root = null
         params = null
-        adjust = null
+        screen = null
         testing = false
     }
 
@@ -205,7 +231,7 @@ class CalibrationOverlay(
         handler.removeCallbacks(testTimeout)
         testing = false
         setTouchable(true)
-        if (testFailed) adjust?.showMessage(R.string.calibration_test_failed)
+        if (testFailed) screen?.showMessage(R.string.calibration_test_failed)
     }
 
     private fun setTouchable(touchable: Boolean) {
@@ -257,23 +283,14 @@ class CalibrationOverlay(
         }
     }
 
-    /** 調整の画面。下に操作パネル、上に線とつまみ（つまみのタッチを優先する）。 */
-    @SuppressLint("ViewConstructor")
-    private inner class AdjustView(
-        context: Context,
-        startRange: ClosedFloatingPointRange<Float>,
-    ) : TestGuardFrame(context) {
+    /**
+     * 全面の画面に共通する部分：操作パネルと、その置き場所。
+     * パネルは、いま動かしているもの（つまみ・しるし）の反対側（上下）に寄せる。
+     */
+    private abstract inner class PanelScreen(context: Context) : TestGuardFrame(context) {
 
-        private val lanes = LaneView(context, startRange)
-        private val panel = LinearLayout(context)
-        private val amountLabel = TextView(context)
-        private val message = TextView(context)
-        private val forwardButton = button(R.string.calibration_forward) {
-            listener.onSelectDirection(DragDirection.FORWARD)
-        }
-        private val backwardButton = button(R.string.calibration_backward) {
-            listener.onSelectDirection(DragDirection.BACKWARD)
-        }
+        protected val panel = LinearLayout(context)
+        protected val message = TextView(context)
         private var panelAtTop = false
 
         /**
@@ -302,6 +319,61 @@ class CalibrationOverlay(
                     cornerRadius = dp(16).toFloat()
                     setStroke(dp(1), Color.argb(80, 0, 0, 0))
                 }
+                // パネルの余白に触れても、下の画面（しるし）に通さない。
+                isClickable = true
+            }
+            message.apply {
+                setTextColor(Color.DKGRAY)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            }
+        }
+
+        fun showMessage(textRes: Int) {
+            message.setText(textRes)
+            message.setTextColor(Color.rgb(176, 0, 32))
+        }
+
+        /** ボタンを等分に並べた行。文字が大きい端末では縮めて 1 行に収める。 */
+        protected fun buttonRow(vararg buttons: Button): LinearLayout =
+            LinearLayout(context).apply {
+                for (b in buttons) {
+                    addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                }
+            }
+
+        /** 操作パネルを、比率 [focusRatio] の位置の反対側に寄せる。 */
+        protected fun placePanel(focusRatio: Float) {
+            val top = focusRatio > 0.5f
+            if (top == panelAtTop && panel.layoutParams != null) return
+            panelAtTop = top
+            panel.layoutParams = panelParams()
+        }
+
+        protected fun panelParams(): LayoutParams =
+            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                gravity = if (panelAtTop) Gravity.TOP else Gravity.BOTTOM
+                setMargins(dp(8), if (panelAtTop) insetTop else 0, dp(8), if (panelAtTop) 0 else insetBottom)
+            }
+    }
+
+    /** 調整の画面。下に操作パネル、上に線とつまみ（つまみのタッチを優先する）。 */
+    @SuppressLint("ViewConstructor")
+    private inner class AdjustView(
+        context: Context,
+        startRange: ClosedFloatingPointRange<Float>,
+    ) : PanelScreen(context) {
+
+        private val lanes = LaneView(context, startRange)
+        private val amountLabel = TextView(context)
+        private val forwardButton = button(R.string.calibration_forward) {
+            listener.onSelectDirection(DragDirection.FORWARD)
+        }
+        private val backwardButton = button(R.string.calibration_backward) {
+            listener.onSelectDirection(DragDirection.BACKWARD)
+        }
+
+        init {
+            panel.apply {
                 addView(LinearLayout(context).apply {
                     gravity = Gravity.CENTER_VERTICAL
                     addView(forwardButton)
@@ -312,26 +384,17 @@ class CalibrationOverlay(
                         gravity = Gravity.END
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 })
-                addView(message.apply {
-                    setTextColor(Color.DKGRAY)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    setText(R.string.calibration_hint)
-                })
+                addView(message.apply { setText(R.string.calibration_hint) })
                 // 4 つを等分に並べ、文字が大きい端末では縮めて 1 行に収める
                 // （表示サイズ 1.25 倍で「保存」が画面外にはみ出した）。
-                addView(LinearLayout(context).apply {
-                    for ((res, action) in listOf(
-                        R.string.calibration_test to { listener.onTest() },
-                        R.string.calibration_reset to { listener.onReset() },
-                        R.string.calibration_cancel to { listener.onCancel() },
-                        R.string.calibration_save to { listener.onSave() },
-                    )) {
-                        addView(
-                            fittingButton(res, action),
-                            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
-                        )
-                    }
-                })
+                addView(
+                    buttonRow(
+                        fittingButton(R.string.calibration_test) { listener.onTest() },
+                        fittingButton(R.string.calibration_reset) { listener.onReset() },
+                        fittingButton(R.string.calibration_cancel) { listener.onCancel() },
+                        fittingButton(R.string.calibration_save) { listener.onSave() },
+                    ),
+                )
             }
             // 後に足したものが上に来る。つまみのタッチを操作パネルより優先する。
             addView(panel, panelParams())
@@ -349,25 +412,6 @@ class CalibrationOverlay(
             backwardButton.alpha = if (direction == DragDirection.BACKWARD) 1f else 0.5f
             placePanel(lanes.focusY())
         }
-
-        fun showMessage(textRes: Int) {
-            message.setText(textRes)
-            message.setTextColor(Color.rgb(176, 0, 32))
-        }
-
-        /** 操作パネルを、いま動かしている（または選んでいる）つまみの反対側に寄せる。 */
-        private fun placePanel(focusRatio: Float) {
-            val top = focusRatio > 0.5f
-            if (top == panelAtTop && panel.layoutParams != null) return
-            panelAtTop = top
-            panel.layoutParams = panelParams()
-        }
-
-        private fun panelParams(): LayoutParams =
-            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                gravity = if (panelAtTop) Gravity.TOP else Gravity.BOTTOM
-                setMargins(dp(8), if (panelAtTop) insetTop else 0, dp(8), if (panelAtTop) 0 else insetBottom)
-            }
 
         /** 線とつまみ。つまみの上で始まったタッチだけを受け取り、それ以外は操作パネルへ通す。 */
         @SuppressLint("ViewConstructor")
@@ -532,6 +576,129 @@ class CalibrationOverlay(
 
             private fun near(event: MotionEvent, x: Float, y: Float): Boolean =
                 abs(event.x - x) <= hitRadius && abs(event.y - y) <= hitRadius
+        }
+    }
+
+    /**
+     * タップ位置の登録の画面（§7.3.7.1）。下に十字のしるし、上に操作パネル。
+     *
+     * パネルの外のタッチはすべて、しるしを置く操作として受け取る（下のアプリには届かない）。
+     * 押したい位置がパネルの下にあっても、しるしを反対側に置くとパネルが逃げるので届く。
+     */
+    @SuppressLint("ViewConstructor")
+    private inner class TapView(context: Context, title: String) : PanelScreen(context) {
+
+        private val marker = MarkerView(context)
+        private val testButton = fittingButton(R.string.calibration_test) { listener.onTest() }
+        private val saveButton = fittingButton(R.string.calibration_save) { listener.onSave() }
+
+        init {
+            panel.apply {
+                addView(TextView(context).apply {
+                    text = title
+                    setTextColor(Color.BLACK)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                })
+                addView(message.apply { setText(R.string.calibration_tap_hint) })
+                addView(
+                    buttonRow(
+                        testButton,
+                        fittingButton(R.string.calibration_cancel) { listener.onCancel() },
+                        saveButton,
+                    ),
+                )
+            }
+            // 後に足したものが上に来る。パネルのボタンを、しるしを置く操作より優先する。
+            addView(marker, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            addView(panel, panelParams())
+        }
+
+        fun update(point: TapPoint?) {
+            marker.point = point
+            marker.invalidate()
+            // しるしを置くまでは、試す・保存する位置が無い。
+            testButton.isEnabled = point != null
+            saveButton.isEnabled = point != null
+            placePanel(point?.ratioY ?: 0f)
+        }
+
+        /** 十字のしるし。触れた位置に置き、指を離さずに動かすと追従する。 */
+        private inner class MarkerView(context: Context) : View(context) {
+
+            var point: TapPoint? = null
+
+            private var offsetX = 0f
+            private var offsetY = 0f
+
+            private val accent = Color.rgb(25, 118, 210)
+            private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = accent
+                strokeWidth = dp(2).toFloat()
+            }
+            private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                strokeWidth = dp(5).toFloat()
+            }
+            private val ringFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(70, 25, 118, 210) }
+            private val ringOutline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                style = Paint.Style.STROKE
+                strokeWidth = dp(7).toFloat()
+            }
+            private val ringStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = accent
+                style = Paint.Style.STROKE
+                strokeWidth = dp(3).toFloat()
+            }
+
+            private val ringRadius = dp(22).toFloat()
+
+            /** しるしの当たり判定。ここで触れたら、しるしを跳ばさずに相対的に動かす（微調整）。 */
+            private val hitRadius = dp(32).toFloat()
+
+            override fun onDraw(canvas: Canvas) {
+                val p = point ?: return
+                val w = width.toFloat()
+                val h = height.toFloat()
+                val x = p.ratioX * w
+                val y = p.ratioY * h
+                // 線は画面の端まで引く。指でしるしが隠れても、指の外で位置が分かる。
+                // しるしの中は空けて、押したいボタンが見えるようにする。
+                for (paint in listOf(outlinePaint, linePaint)) {
+                    canvas.drawLine(0f, y, x - ringRadius, y, paint)
+                    canvas.drawLine(x + ringRadius, y, w, y, paint)
+                    canvas.drawLine(x, 0f, x, y - ringRadius, paint)
+                    canvas.drawLine(x, y + ringRadius, x, h, paint)
+                }
+                canvas.drawCircle(x, y, ringRadius, ringFill)
+                canvas.drawCircle(x, y, ringRadius, ringOutline)
+                canvas.drawCircle(x, y, ringRadius, ringStroke)
+            }
+
+            @SuppressLint("ClickableViewAccessibility")
+            override fun onTouchEvent(event: MotionEvent): Boolean {
+                val w = width.toFloat()
+                val h = height.toFloat()
+                if (w <= 0f || h <= 0f) return false
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        val p = point
+                        if (p != null && abs(event.x - p.ratioX * w) <= hitRadius &&
+                            abs(event.y - p.ratioY * h) <= hitRadius
+                        ) {
+                            offsetX = p.ratioX * w - event.x
+                            offsetY = p.ratioY * h - event.y
+                        } else {
+                            offsetX = 0f
+                            offsetY = 0f
+                        }
+                        listener.onPointChanged((event.x + offsetX) / w, (event.y + offsetY) / h)
+                    }
+                    MotionEvent.ACTION_MOVE ->
+                        listener.onPointChanged((event.x + offsetX) / w, (event.y + offsetY) / h)
+                }
+                return true
+            }
         }
     }
 

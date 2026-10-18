@@ -3,6 +3,7 @@ package com.ayati.volumetap.service
 import com.ayati.volumetap.data.AppProfile
 import com.ayati.volumetap.data.DragLane
 import com.ayati.volumetap.data.ScreenOrientation
+import com.ayati.volumetap.data.TapPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,6 +11,15 @@ import kotlinx.coroutines.flow.getAndUpdate
 
 /** 調整中にどちらのドラッグを動かしているか。 */
 enum class DragDirection { FORWARD, BACKWARD }
+
+/** 何を調整しているか（design-pageturn.md §7.3.7.1）。 */
+sealed interface CalibrationKind {
+    /** ドラッグの位置と送り量。[direction] は最初に選んでおく向き。 */
+    data class Drag(val direction: DragDirection) : CalibrationKind
+
+    /** [key] でタップする位置。タップ座標はキーごとに持つので、1 つずつ登録する。 */
+    data class Tap(val key: VolumeKey) : CalibrationKind
+}
 
 /**
  * 設定画面からサービスへの調整の依頼（design-pageturn.md §7.3.6）。
@@ -20,13 +30,13 @@ enum class DragDirection { FORWARD, BACKWARD }
  */
 object CalibrationRequests {
 
-    data class Request(val packageName: String, val direction: DragDirection)
+    data class Request(val packageName: String, val kind: CalibrationKind)
 
     private val pending = MutableStateFlow<Request?>(null)
     val requests: StateFlow<Request?> = pending.asStateFlow()
 
-    fun request(packageName: String, direction: DragDirection) {
-        pending.value = Request(packageName, direction)
+    fun request(packageName: String, kind: CalibrationKind) {
+        pending.value = Request(packageName, kind)
     }
 
     /** 依頼を取り出す。同じ依頼を 2 度処理しないよう、取り出したら空にする。 */
@@ -45,6 +55,9 @@ object CalibrationRequests {
  *
  * WAITING は「対象アプリを普通に操作して、調整したい画面まで進めてもらう」段階。
  * 重ね表示は小さな帯だけ。ADJUSTING で全面の重ね表示に切り替える。
+ *
+ * ドラッグの調整（2a）とタップ位置の登録（2b、§7.3.7.1）で、状態の移り方は同じ。
+ * 違うのは、ADJUSTING で動かす値（[lane] か [point]）だけ。
  */
 class CalibrationSession(private val ownPackage: String) {
 
@@ -60,6 +73,12 @@ class CalibrationSession(private val ownPackage: String) {
     var direction: DragDirection = DragDirection.FORWARD
         private set
 
+    /** タップ位置を登録しているキー。ドラッグの調整のときは null。 */
+    var tapKey: VolumeKey? = null
+        private set
+
+    val isTap: Boolean get() = tapKey != null
+
     /** 調整を始めたときの画面の向き。ADJUSTING のときだけ値がある。 */
     var orientation: ScreenOrientation? = null
         private set
@@ -71,6 +90,13 @@ class CalibrationSession(private val ownPackage: String) {
     /** その向きを調整していないときに使われる値。「既定に戻す」で戻す先。 */
     private var fallback: DragLane? = null
 
+    /** 登録中のタップ位置。ADJUSTING で、しるしを置いたか登録済みのときだけ値がある。 */
+    var point: TapPoint? = null
+        private set
+
+    /** その向きのタップ位置が未登録のときに使われる値（横持ちなら縦の比率）。 */
+    private var pointFallback: TapPoint? = null
+
     /**
      * 対象アプリが一度でも前面に来たか。起動を待つあいだは、設定画面（自アプリ）が
      * 前面のままでも閉じない。
@@ -80,11 +106,14 @@ class CalibrationSession(private val ownPackage: String) {
 
     val isActive: Boolean get() = phase != Phase.IDLE
 
-    fun start(packageName: String, direction: DragDirection) {
+    fun start(packageName: String, kind: CalibrationKind) {
         close()
         phase = Phase.WAITING
         target = packageName
-        this.direction = direction
+        when (kind) {
+            is CalibrationKind.Drag -> direction = kind.direction
+            is CalibrationKind.Tap -> tapKey = kind.key
+        }
     }
 
     /**
@@ -115,13 +144,24 @@ class CalibrationSession(private val ownPackage: String) {
     fun isOwnOverlayEvent(packageName: String?, className: String?): Boolean =
         isActive && packageName == ownPackage && className?.startsWith("$ownPackage.ui.") != true
 
-    /** 「調整を始める」。その向きの現在の値から始める。 */
+    /** 「調整を始める」。その向きで、いま実際に使われている値から始める。 */
     fun begin(orientation: ScreenOrientation, profile: AppProfile): Boolean {
         if (phase != Phase.WAITING || !seenTarget) return false
         phase = Phase.ADJUSTING
         this.orientation = orientation
-        lane = profile.dragLaneFor(orientation)
-        fallback = profile.fallbackDragLane(orientation)
+        val key = tapKey
+        if (key == null) {
+            lane = profile.dragLaneFor(orientation)
+            fallback = profile.fallbackDragLane(orientation)
+        } else {
+            val setting = profile.settingFor(key)
+            // 横持ちが未登録なら縦の比率が使われている。向きは登録先に揃える。
+            point = setting.tapPointFor(orientation)?.copy(orientation = orientation)
+            pointFallback = when (orientation) {
+                ScreenOrientation.PORTRAIT -> null
+                ScreenOrientation.LANDSCAPE -> setting.tapPortrait?.copy(orientation = orientation)
+            }
+        }
         return true
     }
 
@@ -137,8 +177,20 @@ class CalibrationSession(private val ownPackage: String) {
     }
 
     fun updateLane(value: DragLane) {
-        if (phase == Phase.ADJUSTING) lane = value
+        if (phase == Phase.ADJUSTING && !isTap) lane = value
     }
+
+    /** しるしを置いた・動かした。座標は画面に対する比率。 */
+    fun updatePoint(x: Float, y: Float) {
+        val o = orientation ?: return
+        if (phase == Phase.ADJUSTING && isTap) {
+            point = TapPoint(x.coerceIn(0f, 1f), y.coerceIn(0f, 1f), o)
+        }
+    }
+
+    /** 保存できるか。タップは、しるしを置くまで保存できない。 */
+    val canSave: Boolean
+        get() = phase == Phase.ADJUSTING && (!isTap || point != null)
 
     fun selectDirection(value: DragDirection) {
         direction = value
@@ -146,7 +198,7 @@ class CalibrationSession(private val ownPackage: String) {
 
     /** 「既定に戻す」。その向きを調整していないときの値に戻す（保存すると未調整に戻る）。 */
     fun resetToFallback() {
-        if (phase == Phase.ADJUSTING) lane = fallback
+        if (phase == Phase.ADJUSTING && !isTap) lane = fallback
     }
 
     /**
@@ -156,12 +208,40 @@ class CalibrationSession(private val ownPackage: String) {
      */
     fun laneToSave(): DragLane? = lane?.takeIf { it != fallback }
 
+    /**
+     * 保存する内容を、プロファイルへの変更として返す。保存できないときは null。
+     *
+     * 保存は非同期に行い、その前に [close] で状態を消すので、値はここで取り出しておく。
+     * タップは、未登録のときの値（横持ちなら縦の比率）から動かしていなければ未登録のまま
+     * にする。理由は [laneToSave] と同じ（§7.3.7.1）。
+     */
+    fun saveChange(): ((AppProfile) -> AppProfile)? {
+        if (!canSave) return null
+        val o = orientation ?: return null
+        val key = tapKey
+        if (key == null) {
+            val l = laneToSave()
+            return { it.withDragLane(o, l) }
+        }
+        val p = point ?: return null
+        return if (p == pointFallback) {
+            { profile -> profile.with(key) { it.withoutTapPoint(o) } }
+        } else {
+            { profile -> profile.with(key) { it.withTapPoint(p) } }
+        }
+    }
+
     /** 音量キーで試すときに、保存値の代わりに使う値。 */
     fun override(): CalibrationOverride? {
+        if (phase != Phase.ADJUSTING) return null
         val pkg = target ?: return null
         val o = orientation ?: return null
-        val l = lane ?: return null
-        return if (phase == Phase.ADJUSTING) CalibrationOverride(pkg, o, l) else null
+        val key = tapKey
+        return if (key == null) {
+            lane?.let { CalibrationOverride.Lane(pkg, o, it) }
+        } else {
+            point?.let { CalibrationOverride.Tap(pkg, o, key, it.ratioX, it.ratioY) }
+        }
     }
 
     fun close() {
@@ -170,6 +250,9 @@ class CalibrationSession(private val ownPackage: String) {
         orientation = null
         lane = null
         fallback = null
+        point = null
+        pointFallback = null
+        tapKey = null
         seenTarget = false
         direction = DragDirection.FORWARD
     }

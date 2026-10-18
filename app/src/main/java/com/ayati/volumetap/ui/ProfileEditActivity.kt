@@ -51,6 +51,7 @@ import com.ayati.volumetap.data.KeySetting
 import com.ayati.volumetap.data.ScreenOrientation
 import com.ayati.volumetap.data.SettingsRepository
 import com.ayati.volumetap.data.TapPoint
+import com.ayati.volumetap.service.CalibrationKind
 import com.ayati.volumetap.service.CalibrationRequests
 import com.ayati.volumetap.service.DragDirection
 import com.ayati.volumetap.service.VolumeKey
@@ -102,7 +103,7 @@ class ProfileEditActivity : ComponentActivity() {
                     isDefault = packageName == null,
                     profile = profileOf(current, packageName),
                     serviceEnabled = serviceEnabled.value,
-                    onCalibrate = { packageName?.let { startCalibration(it, profileOf(current, it)) } },
+                    onCalibrate = { packageName?.let { startCalibration(it, dragKindOf(profileOf(current, it))) } },
                     onResetDragLane = { orientation ->
                         lifecycleScope.launch {
                             repository.updateProfile(packageName) { it.withDragLane(orientation, null) }
@@ -118,6 +119,9 @@ class ProfileEditActivity : ComponentActivity() {
                     },
                     onRegisterPoint = { key ->
                         startActivity(PickPointActivity.intent(this, packageName, key))
+                    },
+                    onRegisterPointOnApp = { key ->
+                        packageName?.let { startCalibration(it, CalibrationKind.Tap(key)) }
                     },
                     onClearPoint = { key, orientation ->
                         lifecycleScope.launch {
@@ -140,25 +144,24 @@ class ProfileEditActivity : ComponentActivity() {
     }
 
     /**
-     * 対象アプリを起動し、サービスに調整を依頼する（design-pageturn.md §7.3.4）。
-     * 対象アプリが前面に来たら、サービスが待機の帯を出す。
+     * 対象アプリを起動し、サービスに調整（またはタップ位置の登録）を依頼する
+     * （design-pageturn.md §7.3.4、§7.3.7.1）。対象アプリが前面に来たら、サービスが待機の帯を出す。
      */
-    private fun startCalibration(packageName: String, profile: AppProfile) {
+    private fun startCalibration(packageName: String, kind: CalibrationKind) {
         val launch = packageManager.getLaunchIntentForPackage(packageName)
         if (launch == null) {
             Toast.makeText(this, R.string.calibrate_launch_failed, Toast.LENGTH_SHORT).show()
             return
         }
-        // 送りに割り当てたキーがあれば送りから。
-        val direction = if (profile.volumeDown.action == KeyAction.DRAG_FORWARD ||
-            profile.volumeUp.action == KeyAction.DRAG_FORWARD
-        ) {
-            DragDirection.FORWARD
-        } else {
-            DragDirection.BACKWARD
-        }
-        CalibrationRequests.request(packageName, direction)
+        CalibrationRequests.request(packageName, kind)
         startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    /** ドラッグの調整は、送りに割り当てたキーがあれば送りから始める。 */
+    private fun dragKindOf(profile: AppProfile): CalibrationKind {
+        val forward = profile.volumeDown.action == KeyAction.DRAG_FORWARD ||
+            profile.volumeUp.action == KeyAction.DRAG_FORWARD
+        return CalibrationKind.Drag(if (forward) DragDirection.FORWARD else DragDirection.BACKWARD)
     }
 
     private fun profileOf(settings: AppSettings, packageName: String?): AppProfile =
@@ -185,6 +188,7 @@ private fun ProfileEditScreen(
     onBack: () -> Unit,
     onActionChange: (VolumeKey, KeyAction) -> Unit,
     onRegisterPoint: (VolumeKey) -> Unit,
+    onRegisterPointOnApp: (VolumeKey) -> Unit,
     onClearPoint: (VolumeKey, ScreenOrientation) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -224,8 +228,12 @@ private fun ProfileEditScreen(
                         if (key == VolumeKey.UP) R.string.volume_up_section else R.string.volume_down_section,
                     ),
                     setting = profile.settingFor(key),
+                    // 「その他のアプリ」は重ねる先のアプリが決まらないので、白い画面でだけ登録する。
+                    onAppLabel = title.takeIf { !isDefault },
+                    serviceEnabled = serviceEnabled,
                     onSelect = { onActionChange(key, it) },
                     onRegister = { onRegisterPoint(key) },
+                    onRegisterOnApp = { onRegisterPointOnApp(key) },
                     onClear = { onClearPoint(key, it) },
                 )
             }
@@ -258,8 +266,11 @@ private fun ProfileEditScreen(
 private fun KeySection(
     title: String,
     setting: KeySetting,
+    onAppLabel: String?,
+    serviceEnabled: Boolean,
     onSelect: (KeyAction) -> Unit,
     onRegister: () -> Unit,
+    onRegisterOnApp: () -> Unit,
     onClear: (ScreenOrientation) -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -271,7 +282,14 @@ private fun KeySection(
                 }
             }
             when (setting.action) {
-                KeyAction.TAP -> TapPointSettings(setting, onRegister, onClear)
+                KeyAction.TAP -> TapPointSettings(
+                    setting = setting,
+                    onAppLabel = onAppLabel,
+                    serviceEnabled = serviceEnabled,
+                    onRegister = onRegister,
+                    onRegisterOnApp = onRegisterOnApp,
+                    onClear = onClear,
+                )
                 KeyAction.DRAG_FORWARD, KeyAction.DRAG_BACKWARD -> Text(
                     text = stringResource(
                         if (setting.action == KeyAction.DRAG_FORWARD) {
@@ -371,10 +389,19 @@ private fun DragLaneSection(
 
 private fun percent(lane: DragLane): Int = Math.round(lane.amount * 100)
 
+/**
+ * タップ位置の欄。アプリごとの割り当てでは、対象アプリの上での登録（design-pageturn.md §7.3.7.1）を
+ * 主にし、白い画面での登録を残す。
+ *
+ * @param onAppLabel 対象アプリの名前。null なら「その他のアプリ」で、白い画面でだけ登録する。
+ */
 @Composable
 private fun TapPointSettings(
     setting: KeySetting,
+    onAppLabel: String?,
+    serviceEnabled: Boolean,
     onRegister: () -> Unit,
+    onRegisterOnApp: () -> Unit,
     onClear: (ScreenOrientation) -> Unit,
 ) {
     TapPointRow(R.string.tap_point_portrait, setting.tapPortrait) {
@@ -383,11 +410,31 @@ private fun TapPointSettings(
     TapPointRow(R.string.tap_point_landscape, setting.tapLandscape) {
         onClear(ScreenOrientation.LANDSCAPE)
     }
-    OutlinedButton(
-        onClick = onRegister,
-        modifier = Modifier.padding(top = 8.dp),
-    ) {
-        Text(stringResource(R.string.register))
+    if (onAppLabel == null) {
+        OutlinedButton(
+            onClick = onRegister,
+            modifier = Modifier.padding(top = 8.dp),
+        ) {
+            Text(stringResource(R.string.register))
+        }
+    } else {
+        OutlinedButton(
+            onClick = onRegisterOnApp,
+            enabled = serviceEnabled,
+            modifier = Modifier.padding(top = 8.dp),
+        ) {
+            Text(stringResource(R.string.register_on_app, onAppLabel))
+        }
+        TextButton(onClick = onRegister) {
+            Text(stringResource(R.string.register_on_blank))
+        }
+        if (!serviceEnabled) {
+            Text(
+                text = stringResource(R.string.register_on_app_needs_service),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
     Text(
         text = stringResource(R.string.register_hint),

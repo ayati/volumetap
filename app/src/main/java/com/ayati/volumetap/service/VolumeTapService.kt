@@ -259,7 +259,7 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
     private fun startCalibration(request: CalibrationRequests.Request) {
         Log.i(TAG, "calibration requested: $request")
         overlay.hide()
-        calibration.start(request.packageName, request.direction)
+        calibration.start(request.packageName, request.kind)
         // 対象アプリがいつまでも前面に来なければ（起動に失敗した、など）やめる。
         handler.removeCallbacksAndMessages(WAIT_TOKEN)
         handler.postAtTime(
@@ -284,8 +284,21 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         }
         val target = calibration.target ?: return
         if (calibration.phase == CalibrationSession.Phase.WAITING && foreground.current == target) {
-            overlay.showBand(appLabel(target))
+            val label = appLabel(target)
+            val key = calibration.tapKey
+            overlay.showBand(
+                if (key == null) {
+                    getString(R.string.calibration_band_text, label)
+                } else {
+                    getString(R.string.calibration_tap_band_text, label, getString(keyLabel(key)))
+                },
+            )
         }
+    }
+
+    private fun keyLabel(key: VolumeKey): Int = when (key) {
+        VolumeKey.UP -> R.string.calibration_key_up
+        VolumeKey.DOWN -> R.string.calibration_key_down
     }
 
     /**
@@ -333,6 +346,13 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         override fun onBegin() {
             val target = calibration.target ?: return
             if (!calibration.begin(currentOrientation(), settings.profileFor(target))) return
+            calibration.tapKey?.let { key ->
+                overlay.showTap(
+                    calibration.point,
+                    getString(R.string.calibration_tap_title, getString(keyLabel(key))),
+                )
+                return
+            }
             val lane = calibration.lane ?: return
             overlay.showAdjust(lane, calibration.direction, ScreenMetrics.dragStartRange(this@VolumeTapService))
         }
@@ -341,16 +361,23 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
 
         override fun onSave() {
             val target = calibration.target ?: return
-            val orientation = calibration.orientation ?: return
-            val lane = calibration.laneToSave()
-            scope.launch {
-                repository.updateProfile(target) { it.withDragLane(orientation, lane) }
-            }
-            Log.i(TAG, "calibration saved: $target $orientation $lane")
-            closeCalibration(R.string.calibration_saved, returnToSettings = true)
+            val change = calibration.saveChange() ?: return
+            val message = if (calibration.isTap) R.string.calibration_tap_saved else R.string.calibration_saved
+            Log.i(
+                TAG,
+                "calibration saved: $target ${calibration.orientation} " +
+                    (calibration.tapKey?.let { "$it ${calibration.point}" } ?: "${calibration.laneToSave()}"),
+            )
+            scope.launch { repository.updateProfile(target, change) }
+            closeCalibration(message, returnToSettings = true)
         }
 
         override fun onTest() {
+            if (calibration.isTap) {
+                val point = calibration.point ?: return
+                overlay.runUntouchable { done -> gestures.tap(point.ratioX, point.ratioY, done) }
+                return
+            }
             val lane = calibration.lane ?: return
             val forward = calibration.direction == DragDirection.FORWARD
             overlay.runUntouchable { done ->
@@ -375,6 +402,11 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         override fun onLaneChanged(lane: DragLane) {
             calibration.updateLane(lane)
             overlay.update(lane, calibration.direction)
+        }
+
+        override fun onPointChanged(x: Float, y: Float) {
+            calibration.updatePoint(x, y)
+            overlay.updatePoint(calibration.point)
         }
     }
 

@@ -38,8 +38,8 @@ object DragGeometry {
 object ProfileResolver {
 
     /**
-     * @param calibration 調整中の値（§7.3.6）。前面が調整中のアプリで、向きも同じときだけ、
-     *   保存値の代わりに使う。
+     * @param calibration 調整中の値（§7.3.6、§7.3.7.1）。前面が調整中のアプリで、向きも同じときだけ、
+     *   保存値の代わりに使う。タップの上書きは、さらにキーも同じときだけ。
      */
     fun resolve(
         settings: AppSettings,
@@ -56,25 +56,38 @@ object ProfileResolver {
 
         val profile = settings.profileFor(foreground)
         val setting = profile.settingFor(key)
-        val lane = calibration
-            ?.takeIf { it.packageName == foreground && it.orientation == orientation }
-            ?.lane
-            ?: profile.dragLaneFor(orientation)
+        val active = calibration?.takeIf { it.packageName == foreground && it.orientation == orientation }
+        val lane = (active as? CalibrationOverride.Lane)?.lane ?: profile.dragLaneFor(orientation)
         return when (setting.action) {
             KeyAction.NORMAL -> null
-            // 座標が未登録なら素通し（設計書 §5.1 条件 3）。
-            KeyAction.TAP -> setting.tapPointFor(orientation)?.let {
-                ResolvedAction.Tap(it.ratioX, it.ratioY)
-            }
+            KeyAction.TAP -> (active as? CalibrationOverride.Tap)?.takeIf { it.key == key }
+                ?.let { ResolvedAction.Tap(it.x, it.y) }
+                // 座標が未登録なら素通し（設計書 §5.1 条件 3）。
+                ?: setting.tapPointFor(orientation)?.let { ResolvedAction.Tap(it.ratioX, it.ratioY) }
             KeyAction.DRAG_FORWARD -> ResolvedAction.Drag(lane.x, lane.forwardFrom, lane.x, lane.forwardTo)
             KeyAction.DRAG_BACKWARD -> ResolvedAction.Drag(lane.x, lane.backwardFrom, lane.x, lane.backwardTo)
         }
     }
 }
 
-/** 調整中のドラッグの形（design-pageturn.md §7.3.6）。 */
-data class CalibrationOverride(
-    val packageName: String,
-    val orientation: ScreenOrientation,
-    val lane: DragLane,
-)
+/** 調整中の値（design-pageturn.md §7.3.6、§7.3.7.1）。 */
+sealed interface CalibrationOverride {
+    val packageName: String
+    val orientation: ScreenOrientation
+
+    /** 調整中のドラッグの形。 */
+    data class Lane(
+        override val packageName: String,
+        override val orientation: ScreenOrientation,
+        val lane: DragLane,
+    ) : CalibrationOverride
+
+    /** 登録中のタップ位置。[key] のタップにだけ効く。 */
+    data class Tap(
+        override val packageName: String,
+        override val orientation: ScreenOrientation,
+        val key: VolumeKey,
+        val x: Float,
+        val y: Float,
+    ) : CalibrationOverride
+}

@@ -46,7 +46,10 @@
     <string name="tap_point_none">未登録</string>
     <string name="register">登録</string>
     <string name="clear">解除</string>
-    <string name="register_hint">端末を縦にして開けば縦の座標、横にして開けば横の座標が登録されます。</string>
+    <string name="register_hint">端末を縦にして登録すれば縦の座標、横にして登録すれば横の座標になります。</string>
+    <string name="register_on_app">%1$s の上で登録</string>
+    <string name="register_on_blank">白い画面で登録</string>
+    <string name="register_on_app_needs_service">ユーザー補助で volumetap を有効にすると、アプリの上で登録できます。</string>
 
     <!-- 座標登録画面 -->
     <string name="pick_prompt">タップさせたい位置を\nタップしてください</string>
@@ -119,4 +122,12 @@
     <string name="calibration_closed_left">アプリから離れたため、調整をやめました</string>
     <string name="calibration_closed_rotated">画面の向きが変わったため、調整をやめました</string>
     <string name="calibration_closed_screen_off">画面が消えたため、調整をやめました</string>
+
+    <!-- タップ位置の登録（design-pageturn.md §7.3.7.1） -->
+    <string name="calibration_key_up">音量 ＋</string>
+    <string name="calibration_key_down">音量 −</string>
+    <string name="calibration_tap_band_text">%1$s で、%2$s でタップする位置を登録します。押したいボタンのある画面を開いてから「始める」を押してください。</string>
+    <string name="calibration_tap_title">%1$s でタップする位置</string>
+    <string name="calibration_tap_hint">押したい位置をタップしてください。指を離さずに動かすと、細かく合わせられます。</string>
+    <string name="calibration_tap_saved">タップする位置を保存しました</string>
 </resources>
