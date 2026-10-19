@@ -53,13 +53,14 @@ Power saving may stop volumetap in the background. The app shows which settings 
 The developer's first language is Japanese, and the English and Chinese text includes machine translation. Corrections and suggestions for more natural wording are welcome. Please let us know through GitHub Issues (https://github.com/ayati/volumetap/issues) or by email, with the screen and the wording you would suggest.
 ```
 
-### リリースノート（v0.14.0）
+### リリースノート（v0.15.0）
 
 ```
-volumetap is now available in English and Chinese (Simplified and Traditional), in addition to Japanese.
-• On Android 13 and later, you can choose the language for volumetap alone in Settings → Apps → volumetap → Language.
-• On devices set to other languages, volumetap now appears in English.
-The English and Chinese text includes machine translation. Corrections are welcome through GitHub Issues or by email.
+volumetap 0.15.0
+• PWAs installed from Chrome (such as yomikake) can now have their own settings, separate from Chrome. Until you add one, Chrome's settings apply to it.
+• Add several apps at once, copying the settings of an app you already set up. Search the app list by name.
+• Swipe an app left in the list to remove its settings, with Undo. Remove all app settings from the ⋮ menu.
+• Fixed: on some devices (such as Xiaomi), returning to the home screen kept the previous app's settings.
 ```
 
 ---
@@ -98,13 +99,14 @@ volumetap 适用于触摸屏幕有困难的情况：短按音量键，即可逐�
 开发者的母语是日语，中文文本包含机器翻译。欢迎指出错误或不自然的表达。请通过 GitHub Issues（https://github.com/ayati/volumetap/issues）或电子邮件告诉我们，并注明对应的页面和您建议的表达。
 ```
 
-### リリースノート（v0.14.0）
+### リリースノート（v0.15.0）
 
 ```
-volumetap 新增英文和中文（简体、繁体）界面，原有日文界面不变。
-• 在 Android 13 及以上版本中，可以在“设置 → 应用 → volumetap → 语言”中，单独为 volumetap 选择语言。
-• 在设置为其他语言的设备上，volumetap 现在显示英文。
-中文文本包含机器翻译。欢迎通过 GitHub Issues 或电子邮件指出错误。
+volumetap 0.15.0
+• 通过 Chrome 安装的 PWA（如 yomikake）现在可以单独设置，与 Chrome 分开。添加之前，将使用 Chrome 的设置。
+• 可以一次添加多个应用，并复制已设置应用的设置。可以按名称搜索应用列表。
+• 在列表中向左滑动应用即可删除其设置，并可撤消。可以从 ⋮ 菜单删除所有应用的设置。
+• 修复：在部分设备（如小米）上，返回主屏幕后仍沿用上一个应用的设置。
 ```
 
 ---
@@ -143,21 +145,23 @@ volumetap 適用於觸碰螢幕有困難的情況：短按音量鍵，即可逐�
 開發者的母語是日語，中文文字包含機器翻譯。歡迎指出錯誤或不自然的表達。請透過 GitHub Issues（https://github.com/ayati/volumetap/issues）或電子郵件告訴我們，並註明對應的畫面和您建議的表達。
 ```
 
-### リリースノート（v0.14.0）
+### リリースノート（v0.15.0）
 
 ```
-volumetap 新增英文和中文（簡體、繁體）介面，原有的日文介面不變。
-• 在 Android 13 以上版本中，可以在「設定 → 應用程式 → volumetap → 語言」中，單獨為 volumetap 選擇語言。
-• 在設定為其他語言的裝置上，volumetap 現在會顯示英文。
-中文文字包含機器翻譯。歡迎透過 GitHub Issues 或電子郵件指出錯誤。
+volumetap 0.15.0
+• 透過 Chrome 安裝的 PWA（例如 yomikake）現在可以單獨設定，與 Chrome 分開。新增之前，會使用 Chrome 的設定。
+• 可以一次新增多個應用程式，並複製已設定應用程式的設定。可以依名稱搜尋應用程式清單。
+• 在清單中向左滑動應用程式即可刪除其設定，並可復原。可以從 ⋮ 選單刪除所有應用程式的設定。
+• 修正：在部分裝置（例如小米）上，返回主畫面後仍沿用上一個應用程式的設定。
 ```
 
 ---
 
-## 日本語（ja-JP）のリリースノート（v0.14.0）
+## 日本語（ja-JP）のリリースノート（v0.15.0）
 
 ```
-英語と中国語（簡体字・繁体字）の表示に対応しました。日本語の端末での表示は変わりません。
-・Android 13 以降では、端末の設定 → アプリ → volumetap →「言語」で、volumetap だけの表示の言語を選べます。
-・対応していない言語の端末では、英語で表示するようになりました。
+Chrome でインストールした PWA（yomikake など）を、Chrome とは別に設定できるようになりました。追加するまでは Chrome の設定が使われます。
+・複数のアプリをまとめて追加でき、設定済みのアプリの設定を写せます。アプリ名で検索もできます。
+・一覧でアプリを左へなぞると設定を削除します（元に戻せます）。「⋮」から全アプリの設定を削除できます。
+・一部の端末（Xiaomi など）で、ホーム画面に戻っても直前のアプリの設定が効いていたのを直しました。
 ```
