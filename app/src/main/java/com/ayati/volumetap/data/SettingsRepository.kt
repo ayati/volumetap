@@ -48,10 +48,48 @@ class SettingsRepository(context: Context) {
         }
     }
 
-    suspend fun removeProfile(packageName: String) {
+    /** 複数のアプリに [template] を写して足す。既に割り当てのあるアプリは変えない。 */
+    suspend fun addProfiles(packageNames: Collection<String>, template: AppProfile) {
         store.edit { prefs ->
             val current = prefs.profiles()
+            val next = AppSettings(profiles = current.profiles).profilesWithAdded(packageNames, template)
+            prefs.writeProfiles(current.defaultProfile, next)
+        }
+    }
+
+    /** @return 消した割り当て。無ければ null（「元に戻す」に使う）。 */
+    suspend fun removeProfile(packageName: String): AppProfile? {
+        var removed: AppProfile? = null
+        store.edit { prefs ->
+            val current = prefs.profiles()
+            removed = current.profiles[packageName]
             prefs.writeProfiles(current.defaultProfile, current.profiles - packageName)
+        }
+        return removed
+    }
+
+    /**
+     * 追加したアプリの割り当てをすべて消す（design-pwa-picker.md §9.4）。
+     * 「その他のアプリ」の割り当てと、ほかの設定は残す。
+     *
+     * @return 消した割り当て（「元に戻す」に使う）。
+     */
+    suspend fun removeAllProfiles(): Map<String, AppProfile> {
+        var removed: Map<String, AppProfile> = emptyMap()
+        store.edit { prefs ->
+            val current = prefs.profiles()
+            removed = current.profiles
+            prefs.writeProfiles(current.defaultProfile, emptyMap())
+        }
+        return removed
+    }
+
+    /** 削除を取り消す。割り当てのあるアプリは上書きしない（design-pwa-picker.md §9.5）。 */
+    suspend fun restoreProfiles(removed: Map<String, AppProfile>) {
+        store.edit { prefs ->
+            val current = prefs.profiles()
+            val next = AppSettings(profiles = current.profiles).profilesWithRestored(removed)
+            prefs.writeProfiles(current.defaultProfile, next)
         }
     }
 

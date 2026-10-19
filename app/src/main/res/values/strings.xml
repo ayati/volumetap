@@ -5,7 +5,7 @@
   足し忘れると lint の MissingTranslation でリリースビルドが止まる。
   訳語は design-i18n.md §6.1 の用語集に合わせる。
 -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">volumetap</string>
 
     <!--
@@ -45,6 +45,21 @@
     <string name="drag_forward_hint">Swipes up the screen to scroll to the next screen.</string>
     <string name="drag_backward_hint">Swipes down the screen to go back one screen. Near the top of a list, some apps treat this as “pull to refresh” and reload the list.</string>
     <string name="delete_profile">Remove settings for this app</string>
+    <string name="delete">Remove</string>
+    <string name="profile_removed">Removed %1$s</string>
+    <string name="undo">Undo</string>
+    <string name="more_options">More options</string>
+    <string name="delete_all_profiles">Remove all app settings</string>
+    <string name="delete_all_title">Remove all app settings?</string>
+    <!--
+      件数は 2 以上のときしか出さない（design-pwa-picker.md §9.4）。単数の形が要らないので plurals にしない
+      （StringResourcesTest が plurals を見ないため）。
+    -->
+    <string name="delete_all_message" tools:ignore="PluralsCandidate">This removes the settings for the %1$d apps you added (%2$s). “Other apps” and settings such as the long press time are kept.</string>
+    <string name="delete_all_confirm">Remove all</string>
+    <string name="delete_all_names_more">%1$s, and more</string>
+    <string name="name_separator">", "</string>
+    <string name="profiles_removed" tools:ignore="PluralsCandidate">Removed %1$d apps</string>
     <string name="long_press_threshold">Long press time (ms)</string>
     <string name="haptic_feedback">Haptic feedback</string>
     <string name="tap_point_unregistered">No position is set, so this key still adjusts the volume for now</string>
@@ -70,7 +85,14 @@
     <!-- アプリの追加・誤爆防止 -->
     <string name="app_picker_configured">Configured</string>
     <string name="app_picker_discover_hint">💡 For Google Discover, choose “Google”. The Discover feed to the left of the home screen also belongs to the Google app (“Google News” is a different app).</string>
-    <string name="app_picker_pwa_hint">💡 PWAs (web apps added to the home screen) don\'t appear in this list. They run in the browser, so to use yomikake or similar, choose your browser, such as Chrome.</string>
+    <string name="app_picker_pwa_hint">💡 PWAs installed from Chrome (such as yomikake) can be chosen from this list. Until you add one, Chrome\'s settings apply to it. If a PWA isn\'t listed (added as a shortcut, or from another browser), choose that browser.</string>
+    <string name="app_picker_search">Search apps</string>
+    <string name="app_picker_search_clear">Clear search</string>
+    <string name="app_picker_no_match">No matching apps</string>
+    <string name="app_picker_add_selected">Add (%d)</string>
+    <string name="app_picker_copy_from">Copy from</string>
+    <string name="app_picker_copy_initial">Default (−: Next / +: Prev)</string>
+    <string name="app_picker_webapk">PWA (%s)</string>
     <string name="pause">Pause</string>
     <string name="pause_body">While paused, the volume keys work as usual. You can also switch this from the Quick Settings tile.</string>
     <string name="tile_running">On</string>

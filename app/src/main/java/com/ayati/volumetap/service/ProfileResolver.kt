@@ -40,6 +40,8 @@ object ProfileResolver {
     /**
      * @param calibration 調整中の値（§7.3.6、§7.3.7.1）。前面が調整中のアプリで、向きも同じときだけ、
      *   保存値の代わりに使う。タップの上書きは、さらにキーも同じときだけ。
+     * @param foregroundHost 前面が PWA のとき、それを動かしているブラウザ。PWA に割り当てが無ければ
+     *   ブラウザの割り当てを使う（design-pwa-picker.md §2.4）。
      */
     fun resolve(
         settings: AppSettings,
@@ -48,13 +50,14 @@ object ProfileResolver {
         key: VolumeKey,
         orientation: ScreenOrientation,
         calibration: CalibrationOverride? = null,
+        foregroundHost: String? = null,
     ): ResolvedAction? {
         // クイック設定タイルからの一時停止。最優先で素通しする。
         if (settings.paused) return null
         // 自アプリの設定画面・座標登録画面では介入しない。
         if (foreground == ownPackage) return null
 
-        val profile = settings.profileFor(foreground)
+        val profile = settings.profileFor(foreground, foregroundHost)
         val setting = profile.settingFor(key)
         val active = calibration?.takeIf { it.packageName == foreground && it.orientation == orientation }
         val lane = (active as? CalibrationOverride.Lane)?.lane ?: profile.dragLaneFor(orientation)

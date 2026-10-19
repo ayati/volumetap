@@ -38,6 +38,17 @@
     <string name="drag_forward_hint">在螢幕上由下往上滑動，捲動到下一頁。</string>
     <string name="drag_backward_hint">在螢幕上由上往下滑動，回到上一頁。在清單頂端附近，部分應用程式會把它當作「下拉重新整理」，重新載入清單。</string>
     <string name="delete_profile">刪除此應用程式的設定</string>
+    <string name="delete">刪除</string>
+    <string name="profile_removed">已刪除 %1$s</string>
+    <string name="undo">復原</string>
+    <string name="more_options">更多選項</string>
+    <string name="delete_all_profiles">刪除所有應用程式的設定</string>
+    <string name="delete_all_title">要刪除所有應用程式的設定嗎？</string>
+    <string name="delete_all_message">將刪除已新增的 %1$d 個應用程式（%2$s）的設定。「其他應用程式」和長按時間等設定會保留。</string>
+    <string name="delete_all_confirm">全部刪除</string>
+    <string name="delete_all_names_more">%1$s 等</string>
+    <string name="name_separator">、</string>
+    <string name="profiles_removed">已刪除 %1$d 個應用程式</string>
     <string name="long_press_threshold">長按判定時間（毫秒）</string>
     <string name="haptic_feedback">觸覺回饋</string>
     <string name="tap_point_unregistered">尚未設定位置，因此目前仍用於調整音量</string>
@@ -61,7 +72,14 @@
     <!-- アプリの追加・誤爆防止 -->
     <string name="app_picker_configured">已設定</string>
     <string name="app_picker_discover_hint">💡 使用 Google Discover 時，請選擇「Google」。主畫面左側的 Discover 也屬於 Google 應用程式（「Google 新聞」是另一個應用程式）。</string>
-    <string name="app_picker_pwa_hint">💡 PWA（新增至主畫面的網頁應用程式）不會出現在這份清單中。它們在瀏覽器中執行，因此使用 yomikake 等時，請選擇 Chrome 等瀏覽器。</string>
+    <string name="app_picker_pwa_hint">💡 透過 Chrome 新增至主畫面的 PWA（例如 yomikake）可以從這份清單中選擇。新增之前，會使用 Chrome 的設定。清單中沒有的 PWA（以捷徑新增的，或其他瀏覽器的），請選擇該瀏覽器。</string>
+    <string name="app_picker_search">搜尋應用程式</string>
+    <string name="app_picker_search_clear">清除搜尋</string>
+    <string name="app_picker_no_match">沒有相符的應用程式</string>
+    <string name="app_picker_add_selected">新增（%d）</string>
+    <string name="app_picker_copy_from">複製設定自</string>
+    <string name="app_picker_copy_initial">初始值（-：下一頁 / +：上一頁）</string>
+    <string name="app_picker_webapk">PWA（%s）</string>
     <string name="pause">暫停</string>
     <string name="pause_body">暫停期間，音量鍵會照常運作。也可以透過快速設定圖塊切換。</string>
     <string name="tile_running">運作中</string>

@@ -211,4 +211,31 @@ class ProfileResolverTest {
         val registering = CalibrationOverride.Tap(chrome, ScreenOrientation.PORTRAIT, VolumeKey.DOWN, 0.2f, 0.7f)
         assertEquals(backwardOf(tuned), resolve(settings, chrome, VolumeKey.UP, calibration = registering))
     }
+
+    // --- PWA（design-pwa-picker.md §2.4） ------------------------------------------
+
+    private val pwa = "org.chromium.webapk.aa98b755d5fa3d28e_v2"
+    private val pwaTap = AppProfile(volumeDown = KeySetting(KeyAction.TAP, TapPoint(0.1f, 0.5f, ScreenOrientation.PORTRAIT)))
+
+    private fun resolvePwa(settings: AppSettings) = ProfileResolver.resolve(
+        settings, pwa, own, VolumeKey.DOWN, ScreenOrientation.PORTRAIT, foregroundHost = chrome,
+    )
+
+    @Test
+    fun `PWA に割り当てがあればそれを使う`() {
+        val settings = AppSettings(profiles = mapOf(chrome to AppProfile.NEW_APP, pwa to pwaTap))
+        assertEquals(ResolvedAction.Tap(0.1f, 0.5f), resolvePwa(settings))
+    }
+
+    @Test
+    fun `PWA に割り当てが無ければ Chrome の割り当てを使う`() {
+        assertEquals(forward, resolvePwa(chromeOnly))
+    }
+
+    @Test
+    fun `PWA にも Chrome にも割り当てが無ければ その他のアプリに従う`() {
+        val withDefault = AppSettings(defaultProfile = AppProfile(volumeDown = KeySetting(KeyAction.DRAG_FORWARD)))
+        assertEquals(forward, resolvePwa(withDefault))
+        assertNull(resolvePwa(AppSettings()))
+    }
 }

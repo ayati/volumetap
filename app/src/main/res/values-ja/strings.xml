@@ -39,6 +39,17 @@
     <string name="drag_forward_hint">画面を下から上へなぞる操作で、次の 1 画面へスクロールします。</string>
     <string name="drag_backward_hint">画面を上から下へなぞる操作で、前の 1 画面へ戻ります。一覧の先頭付近では、アプリによっては「引っ張って更新」が働き、一覧が読み込み直されることがあります。</string>
     <string name="delete_profile">このアプリの割り当てを削除</string>
+    <string name="delete">削除</string>
+    <string name="profile_removed">%1$s を削除しました</string>
+    <string name="undo">元に戻す</string>
+    <string name="more_options">その他のオプション</string>
+    <string name="delete_all_profiles">割り当てをすべて削除</string>
+    <string name="delete_all_title">割り当てをすべて削除しますか？</string>
+    <string name="delete_all_message">追加した %1$d 件のアプリ（%2$s）の割り当てを削除します。「その他のアプリ」や長押しの設定などは残ります。</string>
+    <string name="delete_all_confirm">すべて削除</string>
+    <string name="delete_all_names_more">%1$s ほか</string>
+    <string name="name_separator">、</string>
+    <string name="profiles_removed">%1$d 件を削除しました</string>
     <string name="long_press_threshold">長押し判定（ミリ秒）</string>
     <string name="haptic_feedback">触覚フィードバック</string>
     <string name="tap_point_unregistered">座標が未登録のため、いまは音量調整のまま動作します</string>
@@ -62,7 +73,14 @@
     <!-- アプリの追加・誤爆防止 -->
     <string name="app_picker_configured">設定済み</string>
     <string name="app_picker_discover_hint">💡 Google Discover は「Google」を選んでください。ホーム画面の左に出る Discover も、Google アプリとして扱われます（「Google ニュース」は別のアプリです）。</string>
-    <string name="app_picker_pwa_hint">💡 PWA（ホーム画面に追加したウェブアプリ）はこの一覧に出ません。ブラウザ上で動くため、yomikake などを使う場合は Chrome などのブラウザを選んでください。</string>
+    <string name="app_picker_pwa_hint">💡 Chrome でホーム画面に追加した PWA（yomikake など）は、この一覧から選べます。追加するまでは Chrome の設定が使われます。一覧に無い PWA（ショートカットとして追加されたものや、ほかのブラウザのもの）は、そのブラウザを選んでください。</string>
+    <string name="app_picker_search">アプリを検索</string>
+    <string name="app_picker_search_clear">検索語を消す</string>
+    <string name="app_picker_no_match">一致するアプリはありません</string>
+    <string name="app_picker_add_selected">追加（%d）</string>
+    <string name="app_picker_copy_from">写し元</string>
+    <string name="app_picker_copy_initial">初期値（−で送る／＋で戻す）</string>
+    <string name="app_picker_webapk">PWA（%s）</string>
     <string name="pause">一時停止</string>
     <string name="pause_body">一時停止中はボリュームキーが通常どおり動きます。クイック設定タイルからも切り替えられます。</string>
     <string name="tile_running">動作中</string>

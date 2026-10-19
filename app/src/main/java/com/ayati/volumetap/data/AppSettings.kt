@@ -138,8 +138,26 @@ data class AppSettings(
     /** クイック設定タイルからの一時停止。true のあいだは一切介入しない。 */
     val paused: Boolean = false,
 ) {
-    fun profileFor(packageName: String?): AppProfile =
-        packageName?.let { profiles[it] } ?: defaultProfile
+    /**
+     * @param fallback [packageName] に割り当てが無いときに次に探すアプリ。PWA のときの
+     *   ブラウザ（design-pwa-picker.md §2.4）。
+     */
+    fun profileFor(packageName: String?, fallback: String? = null): AppProfile =
+        packageName?.let { profiles[it] } ?: fallback?.let { profiles[it] } ?: defaultProfile
+
+    /**
+     * [packageNames] に [template] を写した割り当てを足す（design-pwa-picker.md §3.2）。
+     * 既に割り当てのあるアプリは上書きしない。
+     */
+    fun profilesWithAdded(packageNames: Collection<String>, template: AppProfile): Map<String, AppProfile> =
+        profiles + packageNames.filter { it !in profiles }.associateWith { template }
+
+    /**
+     * 削除を取り消して、[removed] を書き戻す（design-pwa-picker.md §9.5）。
+     * 取り消すまでのあいだに追加し直されたアプリは、新しい割り当てを残す。
+     */
+    fun profilesWithRestored(removed: Map<String, AppProfile>): Map<String, AppProfile> =
+        profiles + removed.filterKeys { it !in profiles }
 
     companion object {
         const val DEFAULT_LONG_PRESS_MS = 300

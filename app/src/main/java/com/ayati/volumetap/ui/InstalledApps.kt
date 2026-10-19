@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.ayati.volumetap.service.WebApk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -14,6 +15,8 @@ data class InstalledApp(
     val packageName: String,
     val label: String,
     val icon: ImageBitmap?,
+    /** PWA（WebAPK）なら、それを動かすブラウザの名前（例: Chrome）。それ以外は null。 */
+    val webApkHost: String? = null,
 )
 
 /** アプリ名とアイコンの取得。アプリ選択画面・設定画面・アプリ設定画面で共用する。 */
@@ -62,6 +65,8 @@ object InstalledApps {
             icon = runCatching {
                 pm.getApplicationIcon(info).toBitmap(ICON_PX, ICON_PX).asImageBitmap()
             }.getOrNull(),
+            // PWA なら、パッケージ名の代わりに出すブラウザの名前（design-pwa-picker.md §2.5）。
+            webApkHost = WebApk.hostOf(pm, packageName)?.let { (host, name) -> name ?: host },
         )
     }
 }

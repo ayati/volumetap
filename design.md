@@ -16,6 +16,10 @@
 > **v0.14.0 で、英語・中国語（簡体字・繁体字）に対応した**（`design-i18n.md`）。既定の言語は英語
 > （`res/values/`）、日本語は `res/values-ja/`。**文字列を足すときは 4 言語を同時に足す**
 > （足し忘れは lint と `StringResourcesTest` で止まる）。訳語は `design-i18n.md` §6.1 の用語集に合わせる。
+>
+> **v0.15.0 で、Chrome の PWA を Chrome とは別のアプリとして扱えるようにし、アプリの一括追加・検索と、
+> 割り当ての削除（横フリック・すべて削除・元に戻す）を足した**（`design-pwa-picker.md`）。PWA の判定のため、
+> Chrome の PWA 用の画面に限ってウィンドウのタイトル（PWA のアプリ名）を見る。権限・宣言は増えていない。
 
 - パッケージ名: `com.ayati.volumetap`
 - ライセンス: MIT（yomikake に準拠）／名称・アイコンは対象外（§13.1）
@@ -384,7 +388,10 @@ android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged
 **対策**: `ForegroundTracker` は**ランチャーから起動できるアプリ以外を
 前面アプリの変化として扱わない**（直前のアプリを維持する）。
 一覧は `VolumeTapService` が `<queries>`（`ACTION_MAIN` / `CATEGORY_LAUNCHER`）で
-取得し、`setLaunchablePackages()` で渡す。アプリ絞り込み画面の一覧と同じ範囲で、
+取得し、`setLaunchablePackages()` で渡す。**ホーム画面アプリ（`CATEGORY_HOME`）も加える**
+（v0.15.0）。HyperOS のホーム（`com.miui.home`）は LAUNCHER の入口を持たず、加えないと
+ホームに戻ったことが記録されず、ホーム画面で直前のアプリの割り当てが効いていた
+（2026-10-19 に実機で発見）。アプリ絞り込み画面の一覧と同じ範囲で、
 新しい権限は不要。`QUERY_ALL_PACKAGES` も `canRetrieveWindowContent` も要らない。
 
 - 一覧の取得は非同期。**未取得のあいだ（および取得に失敗して空だったとき）は
@@ -394,6 +401,8 @@ android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged
   サービス起動後に入れたアプリがオーバーレイ扱いのまま無視され続ける
 - `com.android.systemui` はランチャーに出ないので一覧取得後は自動的に弾かれるが、
   取得が済むまでのあいだも確実に無視したいので `TRANSIENT_PACKAGES` は残す
+- Chrome の PWA（WebAPK）は、Chrome のパッケージで表示されるが別のアプリとして扱う。
+  判定の規則は `design-pwa-picker.md` §2.2
 
 **代償**: ランチャーに出ない画面が対象アプリの上に出たとき（共有シートなど）、
 前面アプリは対象アプリのまま＝介入が続くため、**登録座標へのタップがその画面に

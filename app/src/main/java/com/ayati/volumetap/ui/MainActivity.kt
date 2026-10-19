@@ -11,7 +11,9 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,9 +21,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,11 +50,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -81,6 +107,9 @@ class MainActivity : ComponentActivity() {
                     onEditProfile = { pkg ->
                         startActivity(ProfileEditActivity.intent(this, pkg))
                     },
+                    removeProfile = repository::removeProfile,
+                    removeAllProfiles = repository::removeAllProfiles,
+                    restoreProfiles = repository::restoreProfiles,
                     onAddApp = {
                         startActivity(Intent(this, AppPickerActivity::class.java))
                     },
@@ -153,15 +182,63 @@ private fun SettingsScreen(
     onOpenAppInfo: () -> Unit,
     apps: Map<String, InstalledApp>,
     onEditProfile: (String?) -> Unit,
+    removeProfile: suspend (String) -> AppProfile?,
+    removeAllProfiles: suspend () -> Map<String, AppProfile>,
+    restoreProfiles: suspend (Map<String, AppProfile>) -> Unit,
     onAddApp: () -> Unit,
     onLongPressChange: (Int) -> Unit,
     onHapticChange: (Boolean) -> Unit,
     onPausedChange: (Boolean) -> Unit,
     onOpenAbout: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
+
+    /**
+     * 「元に戻す」を出す（design-pwa-picker.md §9.5）。前の Snackbar は閉じる。閉じないと順番待ちになり、
+     * 目の前の削除を取り消せない。
+     */
+    fun offerUndo(message: String, undoLabel: String, removed: Map<String, AppProfile>) {
+        if (removed.isEmpty()) return
+        snackbar.currentSnackbarData?.dismiss()
+        scope.launch {
+            val result = snackbar.showSnackbar(message, undoLabel, duration = SnackbarDuration.Long)
+            if (result == SnackbarResult.ActionPerformed) restoreProfiles(removed)
+        }
+    }
+
+    val undoLabel = stringResource(R.string.undo)
+    val removedOne = stringResource(R.string.profile_removed)
+    val removedMany = stringResource(R.string.profiles_removed)
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.app_name)) },
+                actions = {
+                    // すべて削除は普段の画面に出さず、メニューの中に置く（§9.4）。1 件ならフリックで足りる。
+                    if (settings.profiles.size >= 2) {
+                        OverflowMenu(onDeleteAll = { confirmDeleteAll = true })
+                    }
+                },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { inner ->
+        if (confirmDeleteAll) {
+            DeleteAllDialog(
+                labels = settings.profiles.keys.map { apps[it]?.label ?: it }.sorted(),
+                onConfirm = {
+                    confirmDeleteAll = false
+                    scope.launch {
+                        val removed = removeAllProfiles()
+                        offerUndo(removedMany.format(removed.size), undoLabel, removed)
+                    }
+                },
+                onDismiss = { confirmDeleteAll = false },
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -183,12 +260,24 @@ private fun SettingsScreen(
             )
             val sorted = settings.profiles.entries.sortedBy { (pkg, _) -> apps[pkg]?.label ?: pkg }
             for ((pkg, profile) in sorted) {
-                ProfileRow(
-                    app = apps[pkg],
-                    label = apps[pkg]?.label ?: pkg,
-                    profile = profile,
-                    onClick = { onEditProfile(pkg) },
-                )
+                // key が無いと、1 件消したときにフリックの状態が隣の行に引き継がれる。
+                key(pkg) {
+                    val label = apps[pkg]?.label ?: pkg
+                    SwipeToDeleteRow(
+                        onDelete = {
+                            scope.launch {
+                                removeProfile(pkg)?.let { offerUndo(removedOne.format(label), undoLabel, mapOf(pkg to it)) }
+                            }
+                        },
+                    ) {
+                        ProfileRow(
+                            app = apps[pkg],
+                            label = label,
+                            profile = profile,
+                            onClick = { onEditProfile(pkg) },
+                        )
+                    }
+                }
             }
             if (settings.profiles.isEmpty()) {
                 Text(
@@ -254,6 +343,104 @@ private fun ServiceStatusCard(enabled: Boolean, onOpen: () -> Unit) {
             }
         }
     }
+}
+
+/**
+ * 左へのフリックで消せる行（design-pwa-picker.md §9.3）。
+ *
+ * 右へのフリックは有効にしない。左端から右へなぞる動きは、ジェスチャナビの「戻る」と重なる。
+ * フリックできない人のために、読み上げの操作メニューにも「削除」を出す。
+ */
+@Composable
+private fun SwipeToDeleteRow(onDelete: () -> Unit, content: @Composable () -> Unit) {
+    val state = rememberSwipeToDismissBoxState(
+        // 部品の既定（56dp）は短く、縦にスクロールするつもりの斜めの動きでも消えやすい。
+        positionalThreshold = { width -> width * 0.4f },
+    )
+    val deleteLabel = stringResource(R.string.delete)
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        onDismiss = { onDelete() },
+        modifier = Modifier.semantics {
+            customActions = listOf(CustomAccessibilityAction(deleteLabel) { onDelete(); true })
+        },
+        backgroundContent = {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CardDefaults.shape)
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_delete),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = deleteLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        },
+    ) {
+        content()
+    }
+}
+
+/** 上のバーの「⋮」。割り当てをすべて削除する入口だけを持つ。 */
+@Composable
+private fun OverflowMenu(onDeleteAll: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                painter = painterResource(R.drawable.ic_more_vert),
+                contentDescription = stringResource(R.string.more_options),
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.delete_all_profiles)) },
+                onClick = {
+                    expanded = false
+                    onDeleteAll()
+                },
+            )
+        }
+    }
+}
+
+/**
+ * すべて削除の確認（design-pwa-picker.md §9.4）。件数と、アプリ名を最大 3 件見せる。
+ * 出すのは 2 件以上のときだけなので、件数の文言は常に複数でよい。
+ */
+@Composable
+private fun DeleteAllDialog(labels: List<String>, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val names = labels.take(3).joinToString(stringResource(R.string.name_separator)).let {
+        if (labels.size > 3) stringResource(R.string.delete_all_names_more, it) else it
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.delete_all_title)) },
+        text = { Text(stringResource(R.string.delete_all_message, labels.size, names)) },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
+                Text(stringResource(R.string.delete_all_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
 }
 
 /** アプリ 1 件の割り当ての要約。押すとそのアプリの設定画面を開く。 */

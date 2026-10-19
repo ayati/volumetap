@@ -28,6 +28,7 @@ import com.ayati.volumetap.data.SettingsRepository
 import com.ayati.volumetap.ui.ProfileEditActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
@@ -64,6 +65,8 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
      * 一覧を取り直す。取り直さないと、サービス起動後に入れたアプリが
      * オーバーレイ扱いのまま無視され続ける。
      */
+    private var refreshJob: Job? = null
+
     private val packageChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) = refreshLaunchablePackages()
     }
@@ -140,23 +143,49 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
      * 一覧と同じ範囲になる。
      */
     private fun refreshLaunchablePackages() {
-        scope.launch {
-            val packages: Set<String> = withContext(Dispatchers.IO) {
-                val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-                try {
-                    packageManager
-                        // MATCH_DEFAULT_ONLY は付けない（AppPickerActivity と同じ理由）。
-                        .queryIntentActivities(intent, 0)
-                        .mapTo(HashSet()) { it.activityInfo.packageName }
+        // 追加・変更のブロードキャストは続けて届く。前の取得が後から終わって新しい一覧を上書きしないよう止める。
+        refreshJob?.cancel()
+        refreshJob = scope.launch {
+            val started = SystemClock.uptimeMillis()
+            val (packages, webApks) = withContext(Dispatchers.IO) {
+                val packages: Set<String> = try {
+                    // ホーム画面アプリも加える。HyperOS のホーム（com.miui.home）は LAUNCHER の入口を
+                    // 持たず、加えないとホームに戻ったことが記録されない（2026-10-19 に実機で発見）。
+                    listOf(Intent.CATEGORY_LAUNCHER, Intent.CATEGORY_HOME).flatMapTo(HashSet()) { category ->
+                        packageManager
+                            // MATCH_DEFAULT_ONLY は付けない（AppPickerActivity と同じ理由）。
+                            .queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(category), 0)
+                            .map { it.activityInfo.packageName }
+                    }
                 } catch (e: RuntimeException) {
                     // 取得できなければ絞り込みを諦める（従来どおり全パッケージを追う）。
                     Log.w(TAG, "failed to list launchable packages", e)
                     emptySet()
                 }
+                packages to webApksOf(packages)
             }
             foreground.setLaunchablePackages(packages)
-            Log.i(TAG, "launchable packages: ${packages.size}")
+            foreground.setWebApks(webApks)
+            Log.i(
+                TAG,
+                "launchable packages: ${packages.size}, web apks: ${webApks.size}" +
+                    " (${SystemClock.uptimeMillis() - started} ms)",
+            )
         }
+    }
+
+    /**
+     * ランチャーに出るアプリのうち、PWA（WebAPK）のもの（design-pwa-picker.md §2.2）。
+     *
+     * WebAPK かどうかと、どのブラウザで動くかは、メタデータ `runtimeHost` で判定する。
+     * 数百件のメタデータを読まずに済むよう、先に Chrome の WebAPK の接頭辞で絞る。
+     */
+    private fun webApksOf(packages: Set<String>): List<WebApk> = packages.mapNotNull { pkg ->
+        val (host, _) = WebApk.hostOf(packageManager, pkg) ?: return@mapNotNull null
+        runCatching {
+            val label = packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0))
+            WebApk(pkg, host, label.toString())
+        }.getOrNull()
     }
 
     override fun onServiceConnected() {
@@ -186,10 +215,16 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
      */
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val pkg = event.packageName?.toString()
+        val className = event.className?.toString()
         // 調整の重ね表示のイベントで、前面アプリを volumetap に上書きさせない（§7.3.6）。
-        if (calibration.isOwnOverlayEvent(pkg, event.className?.toString())) return
-        if (foreground.onEvent(pkg)) {
-            Log.i(TAG, "foreground -> ${foreground.current}")
+        if (calibration.isOwnOverlayEvent(pkg, className)) return
+        // ウィンドウのタイトルは、Chrome の PWA 用の画面のときだけ読む（PWA のアプリ名が入っている）。
+        // Chrome のタブなど、ほかの画面のタイトル（ページの題名）には触れない（design-pwa-picker.md §5）。
+        val title = if (foreground.isWebApkWindow(pkg, className)) event.text.firstOrNull()?.toString() else null
+        val stateChanged = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        if (foreground.onEvent(pkg, className, title, stateChanged)) {
+            // タイトルはログに出さない。パッケージ名だけ。
+            Log.i(TAG, "foreground -> ${foreground.current}" + (foreground.host?.let { " (on $it)" } ?: ""))
             onForegroundChanged()
         }
     }
@@ -252,6 +287,7 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         key = key,
         orientation = currentOrientation(),
         calibration = calibration.override(),
+        foregroundHost = foreground.host,
     )
 
     // --- 対象アプリの上での調整（design-pageturn.md §7.3） ------------------

@@ -14,6 +14,14 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!--
+          ホーム画面アプリ。HyperOS のホーム（com.miui.home）は LAUNCHER の入口を持たないので、
+          これが無いと前面アプリの判定で無視され、ホームに戻っても直前のアプリの割り当てが残る。
+        -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
     </queries>
 
     <application

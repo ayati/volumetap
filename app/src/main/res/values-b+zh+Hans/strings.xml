@@ -37,6 +37,17 @@
     <string name="drag_forward_hint">在屏幕上从下往上滑动，滚动到下一屏。</string>
     <string name="drag_backward_hint">在屏幕上从上往下滑动，回到上一屏。在列表顶部附近，部分应用会把它当作“下拉刷新”，重新加载列表。</string>
     <string name="delete_profile">删除此应用的设置</string>
+    <string name="delete">删除</string>
+    <string name="profile_removed">已删除 %1$s</string>
+    <string name="undo">撤消</string>
+    <string name="more_options">更多选项</string>
+    <string name="delete_all_profiles">删除所有应用的设置</string>
+    <string name="delete_all_title">要删除所有应用的设置吗？</string>
+    <string name="delete_all_message">将删除已添加的 %1$d 个应用（%2$s）的设置。“其他应用”和长按时间等设置会保留。</string>
+    <string name="delete_all_confirm">全部删除</string>
+    <string name="delete_all_names_more">%1$s 等</string>
+    <string name="name_separator">、</string>
+    <string name="profiles_removed">已删除 %1$d 个应用</string>
     <string name="long_press_threshold">长按判定时间（毫秒）</string>
     <string name="haptic_feedback">触感反馈</string>
     <string name="tap_point_unregistered">尚未设置位置，因此目前仍用于调节音量</string>
@@ -60,7 +71,14 @@
     <!-- アプリの追加・誤爆防止 -->
     <string name="app_picker_configured">已设置</string>
     <string name="app_picker_discover_hint">💡 使用 Google Discover 时，请选择“Google”。主屏幕左侧的 Discover 也属于 Google 应用（“Google 新闻”是另一个应用）。</string>
-    <string name="app_picker_pwa_hint">💡 PWA（添加到主屏幕的网页应用）不会出现在此列表中。它们在浏览器中运行，因此使用 yomikake 等时，请选择 Chrome 等浏览器。</string>
+    <string name="app_picker_pwa_hint">💡 通过 Chrome 添加到主屏幕的 PWA（如 yomikake）可以从此列表中选择。添加之前，将使用 Chrome 的设置。列表中没有的 PWA（以快捷方式添加的，或其他浏览器的），请选择对应的浏览器。</string>
+    <string name="app_picker_search">搜索应用</string>
+    <string name="app_picker_search_clear">清除搜索</string>
+    <string name="app_picker_no_match">没有匹配的应用</string>
+    <string name="app_picker_add_selected">添加（%d）</string>
+    <string name="app_picker_copy_from">复制设置自</string>
+    <string name="app_picker_copy_initial">初始值（-：下一屏 / +：上一屏）</string>
+    <string name="app_picker_webapk">PWA（%s）</string>
     <string name="pause">暂停</string>
     <string name="pause_body">暂停期间，音量键照常工作。也可以通过快捷设置图块切换。</string>
     <string name="tile_running">运行中</string>
