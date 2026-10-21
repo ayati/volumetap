@@ -105,6 +105,29 @@ class SettingsRepository(context: Context) {
         store.edit { it[Keys.PAUSED] = paused }
     }
 
+    /**
+     * 一時停止を保存値から反転する（design-key-options.md §2）。手元に持っている値ではなく
+     * 保存値を読んで書くので、タイルなどほかの切り替えと重なっても食い違わない。
+     *
+     * @return 切り替えたあとの値。
+     */
+    suspend fun togglePaused(): Boolean {
+        var paused = false
+        store.edit { prefs ->
+            paused = !(prefs[Keys.PAUSED] ?: false)
+            prefs[Keys.PAUSED] = paused
+        }
+        return paused
+    }
+
+    suspend fun setSwapKeys(enabled: Boolean) {
+        store.edit { it[Keys.SWAP_KEYS] = enabled }
+    }
+
+    suspend fun setChordToggle(enabled: Boolean) {
+        store.edit { it[Keys.CHORD_TOGGLE] = enabled }
+    }
+
     private fun Preferences.toAppSettings(): AppSettings {
         val profiles = profiles()
         return AppSettings(
@@ -113,6 +136,8 @@ class SettingsRepository(context: Context) {
             longPressMs = this[Keys.LONG_PRESS_MS] ?: AppSettings.DEFAULT_LONG_PRESS_MS,
             hapticFeedback = this[Keys.HAPTIC] ?: true,
             paused = this[Keys.PAUSED] ?: false,
+            swapKeys = this[Keys.SWAP_KEYS] ?: false,
+            chordToggle = this[Keys.CHORD_TOGGLE] ?: false,
         )
     }
 
@@ -168,6 +193,8 @@ class SettingsRepository(context: Context) {
         val LONG_PRESS_MS = intPreferencesKey("long_press_ms")
         val HAPTIC = booleanPreferencesKey("haptic")
         val PAUSED = booleanPreferencesKey("paused")
+        val SWAP_KEYS = booleanPreferencesKey("swap_keys")
+        val CHORD_TOGGLE = booleanPreferencesKey("chord_toggle")
 
         /** v0.10 までのキー。読み替えにだけ使い、書き込まない。 */
         object Legacy {

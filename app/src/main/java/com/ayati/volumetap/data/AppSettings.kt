@@ -137,7 +137,17 @@ data class AppSettings(
     val hapticFeedback: Boolean = true,
     /** クイック設定タイルからの一時停止。true のあいだは一切介入しない。 */
     val paused: Boolean = false,
+    /**
+     * 短押しの割り当てを上下のキーで入れ替える（design-key-options.md §1）。
+     * 上のキーで「音量−」の欄、下のキーで「音量＋」の欄が動く。長押しの音量調整は入れ替えない。
+     */
+    val swapKeys: Boolean = false,
+    /** 上下の同時押しで一時停止を切り替える（design-key-options.md §2）。 */
+    val chordToggle: Boolean = false,
 ) {
+    /** 押した物理キーで動く割り当ての欄。 */
+    fun slotFor(key: VolumeKey): VolumeKey = if (swapKeys) key.opposite else key
+
     /**
      * @param fallback [packageName] に割り当てが無いときに次に探すアプリ。PWA のときの
      *   ブラウザ（design-pwa-picker.md §2.4）。

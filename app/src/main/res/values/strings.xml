@@ -98,6 +98,18 @@
     <string name="tile_running">On</string>
     <string name="tile_paused">Paused</string>
 
+    <!-- 上下の入れ替え・同時押し・一括選択（design-key-options.md） -->
+    <string name="chord_toggle">Press both volume keys to pause or resume</string>
+    <string name="chord_toggle_body">Press volume up and down at the same time to switch pause on or off without opening Quick Settings. Two short vibrations mean paused, one long vibration means resumed. While paused (or in apps set to \"Adjust volume (normal)\"), the first key you press still changes the volume by one step. On phones with a single rocker key you may not be able to press both at once.</string>
+    <string name="chord_paused">volumetap paused</string>
+    <string name="chord_resumed">volumetap resumed</string>
+    <string name="swap_keys">Swap volume up and down</string>
+    <string name="swap_keys_body">Short-pressing volume up runs the \"Volume down\" assignment, and volume down runs the \"Volume up\" assignment. Useful when the keys sit the other way round in your grip. Long press still changes the volume as labeled.</string>
+    <string name="swap_keys_notice">Keys are swapped: \"Volume up: short press\" runs on the volume down key, and \"Volume down: short press\" runs on the volume up key.</string>
+    <string name="app_picker_select_all">Select all</string>
+    <string name="app_picker_clear_all">Deselect all</string>
+    <string name="app_picker_invert">Invert selection</string>
+
     <!-- 共通 -->
     <string name="back">Back</string>
 

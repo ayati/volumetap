@@ -127,12 +127,28 @@ private fun AppPickerScreen(
 
     // 選んだあとで別の画面から追加されたアプリは、件数にも追加にも含めない。
     val pending = selected - profiles.keys
+    val shown = remember(apps, query) {
+        apps?.filter { AppSearch.matches(query, it.label, it.packageName) }
+    }
+    // 一括選択の対象（design-key-options.md §3.2）。表示中で、まだ割り当てのないアプリ。
+    val selectable = remember(shown, profiles) {
+        shown.orEmpty().map { it.packageName }.filterTo(HashSet()) { it !in profiles }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.add_app)) },
                 navigationIcon = { BackButton(onBack) },
+                actions = {
+                    if (selectable.isNotEmpty()) {
+                        SelectionMenu(
+                            onSelectAll = { selected = PickerSelection.selectAll(selected, selectable) },
+                            onClearAll = { selected = PickerSelection.clearAll(selected, selectable) },
+                            onInvert = { selected = PickerSelection.invert(selected, selectable) },
+                        )
+                    }
+                },
             )
         },
         bottomBar = {
@@ -163,7 +179,7 @@ private fun AppPickerScreen(
         ) {
             SearchField(query = query, onQueryChange = { query = it })
 
-            if (apps == null) {
+            if (shown == null) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
@@ -172,9 +188,6 @@ private fun AppPickerScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                val shown = remember(apps, query) {
-                    apps.filter { AppSearch.matches(query, it.label, it.packageName) }
-                }
                 if (shown.isEmpty()) {
                     Text(
                         text = stringResource(R.string.app_picker_no_match),
@@ -215,6 +228,32 @@ private fun AppPickerScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** 上のバーの ⋮。表示中のアプリをまとめて選ぶ・外す・反転する（design-key-options.md §3.1）。 */
+@Composable
+private fun SelectionMenu(onSelectAll: () -> Unit, onClearAll: () -> Unit, onInvert: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.more_options))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            for ((label, action) in listOf(
+                R.string.app_picker_select_all to onSelectAll,
+                R.string.app_picker_clear_all to onClearAll,
+                R.string.app_picker_invert to onInvert,
+            )) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(label)) },
+                    onClick = {
+                        expanded = false
+                        action()
+                    },
+                )
             }
         }
     }

@@ -84,6 +84,18 @@
     <string name="tile_running">运行中</string>
     <string name="tile_paused">已暂停</string>
 
+    <!-- 上下的互换・同时按下・批量选择（design-key-options.md） -->
+    <string name="chord_toggle">同时按下音量上下键以暂停或恢复</string>
+    <string name="chord_toggle_body">同时按下音量+和音量-，无需打开快捷设置即可切换暂停。短振动两次表示已暂停，长振动一次表示已恢复。暂停期间（或在设为“正常调节音量”的应用中），先按下的键仍会使音量改变一级。音量键为一体式翘板的手机可能无法同时按下。</string>
+    <string name="chord_paused">volumetap 已暂停</string>
+    <string name="chord_resumed">volumetap 已恢复</string>
+    <string name="swap_keys">互换音量上下键</string>
+    <string name="swap_keys_body">短按音量+执行“短按音量-”的设置，短按音量-执行“短按音量+”的设置。适用于握持时按键位置感觉相反的手机。长按调节音量仍按键上的标示进行。</string>
+    <string name="swap_keys_notice">已互换上下键：“短按音量+”由音量-键执行，“短按音量-”由音量+键执行。</string>
+    <string name="app_picker_select_all">全选</string>
+    <string name="app_picker_clear_all">取消全选</string>
+    <string name="app_picker_invert">反选</string>
+
     <!-- 共通 -->
     <string name="back">返回</string>
 

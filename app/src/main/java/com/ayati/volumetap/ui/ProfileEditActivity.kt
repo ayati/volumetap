@@ -102,6 +102,7 @@ class ProfileEditActivity : ComponentActivity() {
                     title = title,
                     isDefault = packageName == null,
                     profile = profileOf(current, packageName),
+                    swapKeys = current.swapKeys,
                     serviceEnabled = serviceEnabled.value,
                     onCalibrate = { packageName?.let { startCalibration(it, dragKindOf(profileOf(current, it))) } },
                     onResetDragLane = { orientation ->
@@ -182,6 +183,7 @@ private fun ProfileEditScreen(
     title: String,
     isDefault: Boolean,
     profile: AppProfile,
+    swapKeys: Boolean,
     serviceEnabled: Boolean,
     onCalibrate: () -> Unit,
     onResetDragLane: (ScreenOrientation) -> Unit,
@@ -221,6 +223,8 @@ private fun ProfileEditScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // 欄の名前は入れ替えても変えないので、入れ替え中であることをここで知らせる（design-key-options.md §1.3）。
+            if (swapKeys) SwapKeysNotice()
             // 送り（−）を先に置く。読み進める操作のほうが使う頻度が高い。
             for (key in listOf(VolumeKey.DOWN, VolumeKey.UP)) {
                 KeySection(

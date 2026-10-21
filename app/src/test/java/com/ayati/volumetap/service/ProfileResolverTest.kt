@@ -238,4 +238,35 @@ class ProfileResolverTest {
         assertEquals(forward, resolvePwa(withDefault))
         assertNull(resolvePwa(AppSettings()))
     }
+
+    // --- 上下の入れ替え（design-key-options.md §1） -------------------------
+
+    @Test
+    fun `入れ替えると押したキーと反対の欄で動く`() {
+        val swapped = chromeOnly.copy(swapKeys = true)
+        assertEquals(backward, resolve(swapped, chrome, VolumeKey.DOWN))
+        assertEquals(forward, resolve(swapped, chrome, VolumeKey.UP))
+    }
+
+    @Test
+    fun `入れ替えても通常の欄は素通しする`() {
+        val settings = AppSettings(
+            profiles = mapOf(chrome to AppProfile(volumeDown = KeySetting(KeyAction.DRAG_FORWARD))),
+            swapKeys = true,
+        )
+        assertEquals(forward, resolve(settings, chrome, VolumeKey.UP))
+        assertNull(resolve(settings, chrome, VolumeKey.DOWN))
+    }
+
+    @Test
+    fun `入れ替え中の登録中タップは欄のキーと照らし合わせる`() {
+        val settings = AppSettings(
+            profiles = mapOf(chrome to AppProfile(volumeDown = KeySetting(KeyAction.TAP))),
+            swapKeys = true,
+        )
+        val registering = CalibrationOverride.Tap(chrome, ScreenOrientation.PORTRAIT, VolumeKey.DOWN, 0.2f, 0.7f)
+        // 「音量−」の欄の登録中は、音量＋キーで試す。
+        assertEquals(ResolvedAction.Tap(0.2f, 0.7f), resolve(settings, chrome, VolumeKey.UP, calibration = registering))
+        assertNull(resolve(settings, chrome, VolumeKey.DOWN, calibration = registering))
+    }
 }

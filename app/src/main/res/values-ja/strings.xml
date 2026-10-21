@@ -86,6 +86,18 @@
     <string name="tile_running">動作中</string>
     <string name="tile_paused">一時停止中</string>
 
+    <!-- 上下の入れ替え・同時押し・一括選択（design-key-options.md） -->
+    <string name="chord_toggle">上下の同時押しで一時停止・再開</string>
+    <string name="chord_toggle_body">音量 ＋ と音量 − を同時に押すと、クイック設定を開かずに一時停止を切り替えます。短く 2 回の振動で一時停止、長く 1 回の振動で再開です。一時停止中や「本来の音量調整」のアプリでは、先に押したキーで音量が 1 段だけ変わります。上下が一体のシーソー型のキーの端末では、同時に押せないことがあります。</string>
+    <string name="chord_paused">volumetap を一時停止しました</string>
+    <string name="chord_resumed">volumetap を再開しました</string>
+    <string name="swap_keys">音量キーの上下を入れ替える</string>
+    <string name="swap_keys_body">音量 ＋ の短押しで「音量 − の短押し」の割り当てが、音量 − の短押しで「音量 ＋ の短押し」の割り当てが動きます。握ったときのキーの位置が逆に感じる端末向けです。長押しの音量調整はキーの表示どおりです。</string>
+    <string name="swap_keys_notice">上下を入れ替え中です。「音量 ＋ の短押し」は音量 − キーで、「音量 − の短押し」は音量 ＋ キーで動きます。</string>
+    <string name="app_picker_select_all">すべて選択</string>
+    <string name="app_picker_clear_all">選択をすべて解除</string>
+    <string name="app_picker_invert">選択を反転</string>
+
     <!-- 共通 -->
     <string name="back">戻る</string>
 

@@ -122,6 +122,12 @@ class MainActivity : ComponentActivity() {
                     onPausedChange = {
                         lifecycleScope.launch { repository.setPaused(it) }
                     },
+                    onChordToggleChange = {
+                        lifecycleScope.launch { repository.setChordToggle(it) }
+                    },
+                    onSwapKeysChange = {
+                        lifecycleScope.launch { repository.setSwapKeys(it) }
+                    },
                     onOpenAbout = {
                         startActivity(Intent(this, AboutActivity::class.java))
                     },
@@ -189,6 +195,8 @@ private fun SettingsScreen(
     onLongPressChange: (Int) -> Unit,
     onHapticChange: (Boolean) -> Unit,
     onPausedChange: (Boolean) -> Unit,
+    onChordToggleChange: (Boolean) -> Unit,
+    onSwapKeysChange: (Boolean) -> Unit,
     onOpenAbout: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -258,6 +266,7 @@ private fun SettingsScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (settings.swapKeys) SwapKeysNotice()
             val sorted = settings.profiles.entries.sortedBy { (pkg, _) -> apps[pkg]?.label ?: pkg }
             for ((pkg, profile) in sorted) {
                 // key が無いと、1 件消したときにフリックの状態が隣の行に引き継がれる。
@@ -297,11 +306,13 @@ private fun SettingsScreen(
             )
 
             SectionHeader(R.string.section_scope)
-            PauseSection(settings.paused, onPausedChange)
+            SwitchSection(R.string.pause, R.string.pause_body, settings.paused, onPausedChange)
+            SwitchSection(R.string.chord_toggle, R.string.chord_toggle_body, settings.chordToggle, onChordToggleChange)
 
             SectionHeader(R.string.section_advanced)
             LongPressSection(settings.longPressMs, onLongPressChange)
             HapticSection(settings.hapticFeedback, onHapticChange)
+            SwitchSection(R.string.swap_keys, R.string.swap_keys_body, settings.swapKeys, onSwapKeysChange)
 
             NavigationRow(R.string.about, onOpenAbout)
             Spacer(Modifier.height(8.dp))
@@ -532,8 +543,9 @@ private fun LongPressSection(current: Int, onSelect: (Int) -> Unit) {
     }
 }
 
+/** 見出し・スイッチ・説明文のカード。 */
 @Composable
-private fun PauseSection(paused: Boolean, onPausedChange: (Boolean) -> Unit) {
+private fun SwitchSection(titleRes: Int, bodyRes: Int, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -545,13 +557,15 @@ private fun PauseSection(paused: Boolean, onPausedChange: (Boolean) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.pause),
+                    text = stringResource(titleRes),
                     style = MaterialTheme.typography.titleMedium,
+                    // 長い見出しでもスイッチを押し出さない。
+                    modifier = Modifier.weight(1f).padding(end = 8.dp),
                 )
-                Switch(checked = paused, onCheckedChange = onPausedChange)
+                Switch(checked = checked, onCheckedChange = onCheckedChange)
             }
             Text(
-                text = stringResource(R.string.pause_body),
+                text = stringResource(bodyRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

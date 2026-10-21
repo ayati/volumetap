@@ -275,6 +275,33 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
         if (dispatch(action, null) && settings.hapticFeedback) performHapticFeedback()
     }
 
+    /**
+     * 調整中は同時押しを見ない。一時停止すると、調整の重ね表示の試し押しが音量調整に変わってしまう。
+     */
+    override fun chordEnabled(): Boolean = settings.chordToggle && !calibration.isActive
+
+    /** 上下の同時押しで一時停止を切り替える（design-key-options.md §2）。 */
+    override fun onChord() {
+        scope.launch {
+            val paused = repository.togglePaused()
+            Log.i(TAG, "chord: paused -> $paused")
+            if (paused) gestures.dropPending()
+            // 見ないで切り替える機能なので、振動は「触覚フィードバック」の設定にかかわらず出す（§2.3）。
+            vibrator?.vibrate(
+                if (paused) {
+                    VibrationEffect.createWaveform(CHORD_PAUSED_PATTERN, -1)
+                } else {
+                    VibrationEffect.createOneShot(CHORD_RESUMED_MS, VibrationEffect.DEFAULT_AMPLITUDE)
+                },
+            )
+            Toast.makeText(
+                this@VolumeTapService,
+                if (paused) R.string.chord_paused else R.string.chord_resumed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
     private fun dispatch(action: ResolvedAction, onDone: (() -> Unit)?): Boolean = when (action) {
         is ResolvedAction.Tap -> gestures.tap(action.x, action.y, onDone)
         is ResolvedAction.Drag -> gestures.drag(action.fromX, action.fromY, action.toX, action.toY, onDone)
@@ -326,13 +353,17 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
                 if (key == null) {
                     getString(R.string.calibration_band_text, label)
                 } else {
-                    getString(R.string.calibration_tap_band_text, label, getString(keyLabel(key)))
+                    getString(R.string.calibration_tap_band_text, label, getString(physicalKeyLabel(key)))
                 },
             )
         }
     }
 
-    private fun keyLabel(key: VolumeKey): Int = when (key) {
+    /**
+     * 割り当ての欄 [slot] を動かすために押す物理キーの名前。上下を入れ替えているときは
+     * 反対のキーになる（design-key-options.md §1.3）。
+     */
+    private fun physicalKeyLabel(slot: VolumeKey): Int = when (settings.slotFor(slot)) {
         VolumeKey.UP -> R.string.calibration_key_up
         VolumeKey.DOWN -> R.string.calibration_key_down
     }
@@ -385,7 +416,7 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
             calibration.tapKey?.let { key ->
                 overlay.showTap(
                     calibration.point,
-                    getString(R.string.calibration_tap_title, getString(keyLabel(key))),
+                    getString(R.string.calibration_tap_title, getString(physicalKeyLabel(key))),
                 )
                 return
             }
@@ -501,6 +532,12 @@ class VolumeTapService : AccessibilityService(), ArbiterHost {
 
         /** タップ発火時の触覚フィードバックの長さ。 */
         private const val HAPTIC_DURATION_MS = 20L
+
+        /** 同時押しで一時停止したときの振動（短く 2 回）。待ち・振動・待ち・振動の順。 */
+        private val CHORD_PAUSED_PATTERN = longArrayOf(0, 40, 90, 40)
+
+        /** 同時押しで再開したときの振動（長く 1 回）。 */
+        private const val CHORD_RESUMED_MS = 150L
 
         /** 調整を依頼してから、対象アプリが前面に来るのを待つ時間。 */
         private const val WAIT_FOR_TARGET_MS = 30_000L

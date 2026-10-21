@@ -1,7 +1,13 @@
 package com.ayati.volumetap.service
 
 /** 対象とするボリュームキー。 */
-enum class VolumeKey { UP, DOWN }
+enum class VolumeKey {
+    UP,
+    DOWN,
+    ;
+
+    val opposite: VolumeKey get() = if (this == UP) DOWN else UP
+}
 
 /**
  * 遅延実行の抽象。実機では [android.os.Handler]、テストでは仮想時間の Fake を渡す。
@@ -25,6 +31,12 @@ interface ArbiterHost {
 
     /** 長押し中の音量 1 刻み。長押し確定時と、以降 [VOLUME_REPEAT_MS] ごとに呼ばれる。 */
     fun onVolumeStep(key: VolumeKey)
+
+    /** 上下の同時押しを一時停止の切り替えに使うか（design-key-options.md §2.4）。 */
+    fun chordEnabled(): Boolean
+
+    /** 上下の同時押しを判定した（design-key-options.md §2.1）。 */
+    fun onChord()
 }
 
 /**
@@ -51,10 +63,16 @@ class KeyPressArbiter(
 
         /** 長押し確定。音量を刻んでいる。 */
         LONG_PRESS,
+
+        /** 上下の同時押しの一方。リピートは消費し、UP は [KeyState.passUp] でなければ消費する。 */
+        CHORD,
     }
 
     private class KeyState {
         var state = State.IDLE
+
+        /** [State.CHORD] の UP を OS に渡すか。DOWN を OS に渡していたキーは UP も渡す。 */
+        var passUp = false
         val longPressToken = Any()
         val repeatToken = Any()
         val timeoutToken = Any()
@@ -73,7 +91,15 @@ class KeyPressArbiter(
         val s = states.getValue(key)
         return when (s.state) {
             State.IDLE -> {
-                if (repeatCount > 0) {
+                val other = states.getValue(key.opposite)
+                if (repeatCount == 0 && other.state == State.CHORD) {
+                    // 同時押しのまま片方だけ押し直した。切り替えは繰り返さない。
+                    holdChord(s, passUp = false)
+                    true
+                } else if (repeatCount == 0 && other.state != State.IDLE && host.chordEnabled()) {
+                    enterChord(s, other)
+                    true
+                } else if (repeatCount > 0) {
                     // DOWN を取りこぼした状態でのリピート。素通しに倒す。
                     s.state = State.PASSTHROUGH
                     false
@@ -90,7 +116,7 @@ class KeyPressArbiter(
             }
 
             State.PASSTHROUGH -> false
-            State.PENDING, State.LONG_PRESS -> true
+            State.PENDING, State.LONG_PRESS, State.CHORD -> true
         }
     }
 
@@ -118,6 +144,12 @@ class KeyPressArbiter(
                 s.state = State.IDLE
                 true
             }
+
+            State.CHORD -> {
+                clearTimers(s)
+                s.state = State.IDLE
+                !s.passUp
+            }
         }
     }
 
@@ -127,6 +159,29 @@ class KeyPressArbiter(
             clearTimers(s)
             scheduler.cancel(s.longPressToken)
             s.state = State.IDLE
+            s.passUp = false
+        }
+    }
+
+    /**
+     * 先に押されていた [first] を離す前に [second] が押された（design-key-options.md §2.1）。
+     * 先のキーの短押し・長押しは取り消し、押した時点で切り替える。
+     */
+    private fun enterChord(second: KeyState, first: KeyState) {
+        scheduler.cancel(first.longPressToken)
+        clearTimers(first)
+        holdChord(first, passUp = first.state == State.PASSTHROUGH)
+        holdChord(second, passUp = false)
+        host.onChord()
+    }
+
+    private fun holdChord(s: KeyState, passUp: Boolean) {
+        s.state = State.CHORD
+        s.passUp = passUp
+        // UP が届かないまま画面が切り替わるケースの保険（LONG_PRESS と同じ）。
+        scheduler.postDelayed(s.timeoutToken, LONG_PRESS_TIMEOUT_MS) {
+            s.state = State.IDLE
+            s.passUp = false
         }
     }
 
@@ -161,7 +216,7 @@ class KeyPressArbiter(
         /** 長押し中の音量刻み間隔。 */
         const val VOLUME_REPEAT_MS = 120L
 
-        /** LONG_PRESS 状態の上限。超過したら強制的に IDLE へ戻す。 */
+        /** LONG_PRESS・CHORD 状態の上限。超過したら強制的に IDLE へ戻す。 */
         const val LONG_PRESS_TIMEOUT_MS = 10_000L
     }
 }

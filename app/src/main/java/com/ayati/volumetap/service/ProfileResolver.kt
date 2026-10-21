@@ -58,12 +58,14 @@ object ProfileResolver {
         if (foreground == ownPackage) return null
 
         val profile = settings.profileFor(foreground, foregroundHost)
-        val setting = profile.settingFor(key)
+        // 上下の入れ替え（design-key-options.md §1.1）。以下は押したキーではなく欄で考える。
+        val slot = settings.slotFor(key)
+        val setting = profile.settingFor(slot)
         val active = calibration?.takeIf { it.packageName == foreground && it.orientation == orientation }
         val lane = (active as? CalibrationOverride.Lane)?.lane ?: profile.dragLaneFor(orientation)
         return when (setting.action) {
             KeyAction.NORMAL -> null
-            KeyAction.TAP -> (active as? CalibrationOverride.Tap)?.takeIf { it.key == key }
+            KeyAction.TAP -> (active as? CalibrationOverride.Tap)?.takeIf { it.key == slot }
                 ?.let { ResolvedAction.Tap(it.x, it.y) }
                 // 座標が未登録なら素通し（設計書 §5.1 条件 3）。
                 ?: setting.tapPointFor(orientation)?.let { ResolvedAction.Tap(it.ratioX, it.ratioY) }

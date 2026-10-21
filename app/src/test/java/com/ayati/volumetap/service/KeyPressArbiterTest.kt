@@ -39,14 +39,18 @@ private class FakeScheduler : Scheduler {
 private class RecordingHost(
     var intercept: Boolean = true,
     var longPress: Long = 300L,
+    var chord: Boolean = false,
 ) : ArbiterHost {
     val shortPresses = mutableListOf<VolumeKey>()
     val volumeSteps = mutableListOf<VolumeKey>()
+    var chords = 0
 
     override fun shouldIntercept(key: VolumeKey) = intercept
     override fun longPressMs() = longPress
     override fun onShortPress(key: VolumeKey) { shortPresses.add(key) }
     override fun onVolumeStep(key: VolumeKey) { volumeSteps.add(key) }
+    override fun chordEnabled() = chord
+    override fun onChord() { chords++ }
 }
 
 class KeyPressArbiterTest {
@@ -213,5 +217,99 @@ class KeyPressArbiterTest {
         assertEquals(KeyPressArbiter.State.PENDING, arbiter.stateOf(VolumeKey.UP))
         arbiter.onKeyUp(VolumeKey.UP)
         assertEquals(listOf(VolumeKey.UP), host.shortPresses)
+    }
+
+    // --- 上下の同時押し（design-key-options.md §2.1） ----------------------
+
+    @Test
+    fun `押下中にもう片方を押すと同時押しになり送らない`() {
+        host.chord = true
+        assertTrue(arbiter.onKeyDown(VolumeKey.DOWN, 0))
+        scheduler.advance(50)
+        assertTrue(arbiter.onKeyDown(VolumeKey.UP, 0))
+
+        // 押した時点で切り替える。
+        assertEquals(1, host.chords)
+        assertEquals(KeyPressArbiter.State.CHORD, arbiter.stateOf(VolumeKey.DOWN))
+        assertEquals(KeyPressArbiter.State.CHORD, arbiter.stateOf(VolumeKey.UP))
+
+        // 長押しの時間を過ぎても音量は刻まない。リピートと UP は消費する。
+        scheduler.advance(1000)
+        assertTrue(arbiter.onKeyDown(VolumeKey.DOWN, 5))
+        assertTrue(arbiter.onKeyUp(VolumeKey.UP))
+        assertTrue(arbiter.onKeyUp(VolumeKey.DOWN))
+
+        assertTrue(host.shortPresses.isEmpty())
+        assertTrue(host.volumeSteps.isEmpty())
+        assertEquals(1, host.chords)
+        assertEquals(KeyPressArbiter.State.IDLE, arbiter.stateOf(VolumeKey.UP))
+        assertEquals(KeyPressArbiter.State.IDLE, arbiter.stateOf(VolumeKey.DOWN))
+        assertEquals(0, scheduler.pendingCount)
+    }
+
+    @Test
+    fun `長押し中にもう片方を押しても同時押しになり音量の刻みが止まる`() {
+        host.chord = true
+        arbiter.onKeyDown(VolumeKey.UP, 0)
+        scheduler.advance(301)
+        assertEquals(1, host.volumeSteps.size)
+
+        assertTrue(arbiter.onKeyDown(VolumeKey.DOWN, 0))
+        scheduler.advance(KeyPressArbiter.VOLUME_REPEAT_MS * 5)
+
+        assertEquals(1, host.chords)
+        assertEquals(1, host.volumeSteps.size)
+    }
+
+    @Test
+    fun `素通ししたキーの同時押しではそのキーのUPだけOSに渡す`() {
+        host.chord = true
+        host.intercept = false
+        assertFalse(arbiter.onKeyDown(VolumeKey.UP, 0))
+        assertTrue(arbiter.onKeyDown(VolumeKey.DOWN, 0))
+        assertEquals(1, host.chords)
+
+        // 素通ししたキーのリピートは止める（音量が 1 段より多く変わらないように）。
+        assertTrue(arbiter.onKeyDown(VolumeKey.UP, 1))
+        assertFalse(arbiter.onKeyUp(VolumeKey.UP))
+        assertTrue(arbiter.onKeyUp(VolumeKey.DOWN))
+    }
+
+    @Test
+    fun `離してから押したのは同時押しではない`() {
+        host.chord = true
+        arbiter.onKeyDown(VolumeKey.DOWN, 0)
+        arbiter.onKeyUp(VolumeKey.DOWN)
+        arbiter.onKeyDown(VolumeKey.UP, 0)
+        arbiter.onKeyUp(VolumeKey.UP)
+
+        assertEquals(0, host.chords)
+        assertEquals(listOf(VolumeKey.DOWN, VolumeKey.UP), host.shortPresses)
+    }
+
+    @Test
+    fun `同時押しのまま片方を押し直しても切り替えは1回`() {
+        host.chord = true
+        arbiter.onKeyDown(VolumeKey.DOWN, 0)
+        arbiter.onKeyDown(VolumeKey.UP, 0)
+        arbiter.onKeyUp(VolumeKey.UP)
+        assertTrue(arbiter.onKeyDown(VolumeKey.UP, 0))
+        assertTrue(arbiter.onKeyUp(VolumeKey.UP))
+        assertTrue(arbiter.onKeyUp(VolumeKey.DOWN))
+
+        assertEquals(1, host.chords)
+        assertTrue(host.shortPresses.isEmpty())
+    }
+
+    @Test
+    fun `同時押しのUP取りこぼしは上限タイマーでIDLEへ戻る`() {
+        host.chord = true
+        arbiter.onKeyDown(VolumeKey.DOWN, 0)
+        arbiter.onKeyDown(VolumeKey.UP, 0)
+        scheduler.advance(KeyPressArbiter.LONG_PRESS_TIMEOUT_MS)
+
+        assertEquals(KeyPressArbiter.State.IDLE, arbiter.stateOf(VolumeKey.UP))
+        assertEquals(KeyPressArbiter.State.IDLE, arbiter.stateOf(VolumeKey.DOWN))
+        assertEquals(0, scheduler.pendingCount)
     }
 }
