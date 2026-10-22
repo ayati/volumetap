@@ -108,6 +108,21 @@ private fun AboutScreen(
                 }
             }
 
+            // ユーザー補助の利用目的とプライバシー（design.md §6.1.3）。同意のダイアログと同じ内容を常に読めるようにする。
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.about_privacy_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = stringResource(R.string.about_privacy_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+            }
+
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     LinkRow(R.string.repository, REPOSITORY_URL, onOpenUrl)

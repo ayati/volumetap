@@ -6,12 +6,21 @@
 <resources>
     <!-- ユーザー補助の説明文（design-i18n.md §6.3）。 -->
     <string name="accessibility_service_summary">用音量键代替点击和滚动屏幕</string>
-    <string name="accessibility_service_description">适用于触摸屏幕有困难的情况：短按音量键，即可逐屏滚动屏幕，或点击预先设置的位置。适合单手持机、躺着阅读，或手指活动受限时使用。\n\n长按音量键时，仍像平常一样调节音量。\n\n本应用不会读取屏幕上显示的内容。本应用没有访问互联网的权限，因此不会向设备外发送任何信息。</string>
+    <string name="accessibility_service_description">适用于触摸屏幕有困难的情况：短按音量键，即可逐屏滚动屏幕，或点击预先设置的位置。适合单手持机、躺着阅读，或手指活动受限时使用。\n\n长按音量键时，仍像平常一样调节音量。\n\n为了切换到各应用的设置，本应用仅读取正在使用的应用的名称，不会读取屏幕上显示的内容。本应用没有访问互联网的权限，因此不会向设备外发送任何信息。</string>
 
     <!-- 設定画面 -->
     <string name="service_disabled_title">无障碍服务未开启</string>
-    <string name="service_disabled_body">要使用 volumetap，请在设备设置中开启它的无障碍服务。</string>
+    <string name="service_disabled_body">要用音量键滚动或点击屏幕，需要无障碍权限。请在设备设置中开启 volumetap 的无障碍服务。</string>
     <string name="service_enabled">无障碍服务已开启</string>
+
+    <!-- ユーザー補助の利用の開示と同意（design.md §6.1.3）。 -->
+    <string name="consent_title">关于无障碍服务的使用</string>
+    <string name="consent_body">volumetap 仅将 Android 的无障碍服务（Accessibility API）用于以下用途：\n\n・接收音量键的按键操作\n・代为滚动和点击屏幕\n・识别正在使用的应用，并切换到该应用的设置（仅使用应用的名称）\n\n本应用不会读取屏幕上显示的内容，也不会收集个人信息。本应用没有访问互联网的权限，因此不会向设备外发送任何信息。</string>
+    <string name="consent_next">同意后，将打开无障碍设置页面。</string>
+    <string name="consent_agree_open">同意并打开设置</string>
+    <string name="consent_agree">同意</string>
+    <string name="consent_decline">不同意</string>
+
     <string name="power_restriction_title">需要设置省电策略</string>
     <!-- 端末の画面の名前は design-i18n.md §6.2.1 で実機から写したもの。 -->
     <string name="power_restriction_body">在此设备上，省电功能会停止在后台运行的 volumetap，导致音量键有时失效。\n\n请完成以下两项设置：\n・在应用信息的“省电策略”中，选择“无限制”\n・在设备设置 →“应用设置”→ 页面上方的“后台启动”中，开启 volumetap\n\n更改设置后，无障碍服务会暂时关闭。设置完成后，请重新开启 volumetap 的无障碍服务。\n\n（菜单名称可能因设备而异。）</string>
@@ -105,6 +114,8 @@
     <string name="about_tagline">短按音量键，即可逐屏滚动屏幕，或点击设置好的位置。长按仍为正常的音量调节。无广告、无付费、不联网。</string>
     <string name="repository">源代码（GitHub）</string>
     <string name="privacy_policy">隐私政策（日文）</string>
+    <string name="about_privacy_title">无障碍与隐私</string>
+    <string name="about_privacy_body">・无障碍服务（Accessibility API）仅用于接收音量键、执行滚动和点击，以及识别正在使用的应用。\n・不会读取屏幕上显示的文字或图像。\n・不会收集个人信息。本应用没有访问互联网的权限，因此不会向外部发送任何信息。\n・设置仅保存在本设备中。\n・可随时在设备设置中关闭无障碍服务。</string>
     <string name="about_license_note">代码以 MIT 许可证公开。“volumetap”名称及应用图标不在 MIT 许可证的范围内。</string>
     <string name="no_browser">未找到浏览器</string>
 

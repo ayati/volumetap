@@ -42,6 +42,7 @@ It helps when reading one-handed or lying down, or when finger movement is limit
 
 ■ Accessibility service and privacy
 • volumetap uses the Accessibility service only to receive volume key presses and to perform swipes and taps.
+• It checks only which app is in front, to apply that app's settings.
 • It does not read what is shown on the screen.
 • It has no permission to access the internet, so no information is ever sent off the device.
 • No ads, no purchases. Open source (MIT License): https://github.com/ayati/volumetap
@@ -87,6 +88,7 @@ volumetap 适用于触摸屏幕有困难的情况：短按音量键，即可逐�
 
 ■ 无障碍服务与隐私
 • volumetap 使用无障碍服务，仅用于接收音量键的按键，以及执行滑动和点击。
+• 本应用仅识别前台应用，以便切换到该应用的设置。
 • 本应用不会读取屏幕上显示的内容。
 • 本应用没有访问互联网的权限，因此不会向设备外发送任何信息。
 • 无广告、无付费。开源（MIT 许可证）：https://github.com/ayati/volumetap
@@ -132,6 +134,7 @@ volumetap 適用於觸碰螢幕有困難的情況：短按音量鍵，即可逐�
 
 ■ 無障礙服務與隱私權
 • volumetap 使用無障礙服務，僅用於接收音量鍵的按鍵，以及執行滑動和輕觸。
+• 本應用程式僅辨識前景應用程式，以便切換到該應用程式的設定。
 • 本應用程式不會讀取螢幕上顯示的內容。
 • 本應用程式沒有存取網際網路的權限，因此不會將任何資訊傳送到裝置之外。
 • 無廣告、無付費。開放原始碼（MIT 授權條款）：https://github.com/ayati/volumetap

@@ -49,6 +49,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -67,6 +68,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.lifecycleScope
 import com.ayati.volumetap.R
 import com.ayati.volumetap.data.AppProfile
@@ -93,6 +95,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             VolumeTapTheme {
                 val settings by repository.settings.collectAsState(initial = AppSettings())
+                // 読み込み前（null）は同意の確認を出さない。出すと同意済みの人にも一瞬見える。
+                val consent by repository.accessibilityConsent.collectAsState(initial = null)
                 // 一覧に出すアプリ名とアイコン。割り当てのあるアプリが変わったら取り直す。
                 val apps by produceState(emptyMap<String, InstalledApp>(), settings.profiles.keys) {
                     value = InstalledApps.of(this@MainActivity, settings.profiles.keys)
@@ -101,6 +105,11 @@ class MainActivity : ComponentActivity() {
                     settings = settings,
                     serviceEnabled = serviceEnabled.value,
                     powerRestricted = powerRestricted.value,
+                    accessibilityConsent = consent,
+                    onAgreeToAccessibility = { openSettings ->
+                        lifecycleScope.launch { repository.setAccessibilityConsent() }
+                        if (openSettings) openAccessibilitySettings()
+                    },
                     onOpenAccessibilitySettings = ::openAccessibilitySettings,
                     onOpenAppInfo = ::openAppInfo,
                     apps = apps,
@@ -184,6 +193,8 @@ private fun SettingsScreen(
     settings: AppSettings,
     serviceEnabled: Boolean,
     powerRestricted: Boolean,
+    accessibilityConsent: Boolean?,
+    onAgreeToAccessibility: (openSettings: Boolean) -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
     onOpenAppInfo: () -> Unit,
     apps: Map<String, InstalledApp>,
@@ -202,6 +213,18 @@ private fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
+    var showConsent by rememberSaveable { mutableStateOf(false) }
+    // 「設定を開く」から出したときは、有効でも同意のあとに設定画面を開く（オフにしたくて押した人がいる）。
+    var consentFromButton by rememberSaveable { mutableStateOf(false) }
+    // 同意するまでは、起動するたびに 1 回だけ出す。「同意しない」のあとは「設定を開く」を押すまで出さない。
+    var consentAsked by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(accessibilityConsent) {
+        if (accessibilityConsent == false && !consentAsked) {
+            consentAsked = true
+            consentFromButton = false
+            showConsent = true
+        }
+    }
 
     /**
      * 「元に戻す」を出す（design-pwa-picker.md §9.5）。前の Snackbar は閉じる。閉じないと順番待ちになり、
@@ -247,6 +270,17 @@ private fun SettingsScreen(
                 onDismiss = { confirmDeleteAll = false },
             )
         }
+        if (showConsent) {
+            val openSettings = consentFromButton || !serviceEnabled
+            AccessibilityConsentDialog(
+                opensSettings = openSettings,
+                onAgree = {
+                    showConsent = false
+                    onAgreeToAccessibility(openSettings)
+                },
+                onDecline = { showConsent = false },
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -258,7 +292,18 @@ private fun SettingsScreen(
             // 省電力設定を変えると端末がアプリを強制停止し、ユーザー補助がオフになる。
             // 「省電力設定 → ユーザー補助」の順に読めるよう、状態カードより上に置く。
             if (powerRestricted) PowerRestrictionCard(onOpenAppInfo)
-            ServiceStatusCard(serviceEnabled, onOpenAccessibilitySettings)
+            ServiceStatusCard(serviceEnabled) {
+                // 同意の前に設定画面へは送らない（design.md §6.1.3）。
+                // 読み込み前（null）は何もしない。同意済みの人にダイアログを出さないため。
+                when (accessibilityConsent) {
+                    true -> onOpenAccessibilitySettings()
+                    false -> {
+                        consentFromButton = true
+                        showConsent = true
+                    }
+                    null -> Unit
+                }
+            }
 
             SectionHeader(R.string.section_assignment)
             Text(
@@ -354,6 +399,41 @@ private fun ServiceStatusCard(enabled: Boolean, onOpen: () -> Unit) {
             }
         }
     }
+}
+
+/**
+ * ユーザー補助の利用目的の開示と同意（design.md §6.1.3。Play のユーザー補助 API のポリシー）。
+ *
+ * 画面の外や戻るでは閉じない。閉じただけでは同意にならないので、どちらかのボタンを選んでもらう。
+ * [opensSettings] が false のとき（すでに有効な人に起動時に出したとき）は、設定画面を開かずに同意だけを受ける。
+ */
+@Composable
+private fun AccessibilityConsentDialog(opensSettings: Boolean, onAgree: () -> Unit, onDecline: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        title = { Text(stringResource(R.string.consent_title)) },
+        text = {
+            // 文字を大きくしている端末でもボタンが押し出されないよう、本文だけをスクロールさせる。
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.consent_body))
+                if (opensSettings) {
+                    Text(
+                        text = stringResource(R.string.consent_next),
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onAgree) {
+                Text(stringResource(if (opensSettings) R.string.consent_agree_open else R.string.consent_agree))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDecline) { Text(stringResource(R.string.consent_decline)) }
+        },
+    )
 }
 
 /**

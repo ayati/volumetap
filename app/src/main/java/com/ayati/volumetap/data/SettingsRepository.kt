@@ -24,12 +24,23 @@ class SettingsRepository(context: Context) {
 
     private val store = context.applicationContext.dataStore
 
-    val settings: Flow<AppSettings> = store.data
+    private val prefs: Flow<Preferences> = store.data
         .catch { e ->
             // 読み込み失敗時は既定値に倒す。設定が壊れて音量が効かなくなるより安全。
             if (e is IOException) emit(emptyPreferences()) else throw e
         }
-        .map { it.toAppSettings() }
+
+    val settings: Flow<AppSettings> = prefs.map { it.toAppSettings() }
+
+    /**
+     * ユーザー補助の利用への同意（design.md §6.1.3）。設定値ではないので [AppSettings] には入れない。
+     * 読み込み前と区別できるよう、呼ぶ側は初期値を null にして集める。
+     */
+    val accessibilityConsent: Flow<Boolean> = prefs.map { it[Keys.ACCESSIBILITY_CONSENT] ?: false }
+
+    suspend fun setAccessibilityConsent() {
+        store.edit { it[Keys.ACCESSIBILITY_CONSENT] = true }
+    }
 
     /**
      * プロファイルを書き換える。[packageName] が null なら既定のプロファイル。
@@ -195,6 +206,8 @@ class SettingsRepository(context: Context) {
         val PAUSED = booleanPreferencesKey("paused")
         val SWAP_KEYS = booleanPreferencesKey("swap_keys")
         val CHORD_TOGGLE = booleanPreferencesKey("chord_toggle")
+        /** ユーザー補助の利用への同意。v0.17.0 から。 */
+        val ACCESSIBILITY_CONSENT = booleanPreferencesKey("accessibility_consent")
 
         /** v0.10 までのキー。読み替えにだけ使い、書き込まない。 */
         object Legacy {

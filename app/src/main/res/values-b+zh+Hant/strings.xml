@@ -7,12 +7,21 @@
 <resources>
     <!-- ユーザー補助の説明文（design-i18n.md §6.3）。 -->
     <string name="accessibility_service_summary">用音量鍵代替輕觸和捲動螢幕</string>
-    <string name="accessibility_service_description">適用於觸碰螢幕有困難的情況：短按音量鍵，即可逐頁捲動畫面，或輕觸預先設定的位置。適合單手持機、躺著閱讀，或手指活動受限時使用。\n\n長按音量鍵時，仍像平常一樣調整音量。\n\n本應用程式不會讀取螢幕上顯示的內容。本應用程式沒有存取網際網路的權限，因此不會將任何資訊傳送到裝置之外。</string>
+    <string name="accessibility_service_description">適用於觸碰螢幕有困難的情況：短按音量鍵，即可逐頁捲動畫面，或輕觸預先設定的位置。適合單手持機、躺著閱讀，或手指活動受限時使用。\n\n長按音量鍵時，仍像平常一樣調整音量。\n\n為了切換到各應用程式的設定，本應用程式僅讀取正在使用的應用程式名稱，不會讀取螢幕上顯示的內容。本應用程式沒有存取網際網路的權限，因此不會將任何資訊傳送到裝置之外。</string>
 
     <!-- 設定画面 -->
     <string name="service_disabled_title">無障礙服務未開啟</string>
-    <string name="service_disabled_body">如要使用 volumetap，請在裝置設定中開啟它的無障礙服務。</string>
+    <string name="service_disabled_body">如要用音量鍵捲動或輕觸螢幕，需要無障礙權限。請在裝置設定中開啟 volumetap 的無障礙服務。</string>
     <string name="service_enabled">無障礙服務已開啟</string>
+
+    <!-- ユーザー補助の利用の開示と同意（design.md §6.1.3）。 -->
+    <string name="consent_title">關於無障礙服務的使用</string>
+    <string name="consent_body">volumetap 僅將 Android 的無障礙服務（Accessibility API）用於以下用途：\n\n・接收音量鍵的按鍵操作\n・代為捲動和輕觸螢幕\n・辨識正在使用的應用程式，並切換到該應用程式的設定（僅使用應用程式的名稱）\n\n本應用程式不會讀取螢幕上顯示的內容，也不會收集個人資訊。本應用程式沒有存取網際網路的權限，因此不會將任何資訊傳送到裝置之外。</string>
+    <string name="consent_next">同意後，將開啟無障礙設定畫面。</string>
+    <string name="consent_agree_open">同意並開啟設定</string>
+    <string name="consent_agree">同意</string>
+    <string name="consent_decline">不同意</string>
+
     <string name="power_restriction_title">需要設定省電策略</string>
     <!-- 端末の画面の名前は design-i18n.md §6.2.1 で実機から写したもの（「後台」は HyperOS の表示どおり）。 -->
     <string name="power_restriction_body">在這部裝置上，省電功能會停止在背景執行的 volumetap，導致音量鍵有時失效。\n\n請完成以下兩項設定：\n・在應用程式資訊的「省電策略」中，選擇「無限制」\n・在裝置設定 →「應用程式設定」→ 畫面上方的「後台啟動」中，開啟 volumetap\n\n變更設定後，無障礙服務會暫時關閉。設定完成後，請重新開啟 volumetap 的無障礙服務。\n\n（選單名稱可能因裝置而異。）</string>
@@ -106,6 +115,8 @@
     <string name="about_tagline">短按音量鍵，即可逐頁捲動畫面，或輕觸設定好的位置。長按仍為正常的音量調整。無廣告、無付費、不連網。</string>
     <string name="repository">原始碼（GitHub）</string>
     <string name="privacy_policy">隱私權政策（日文）</string>
+    <string name="about_privacy_title">無障礙與隱私權</string>
+    <string name="about_privacy_body">・無障礙服務（Accessibility API）僅用於接收音量鍵、執行捲動和輕觸，以及辨識正在使用的應用程式。\n・不會讀取螢幕上顯示的文字或圖像。\n・不會收集個人資訊。本應用程式沒有存取網際網路的權限，因此不會將任何資訊傳送到外部。\n・設定僅儲存在本裝置中。\n・可隨時在裝置設定中關閉無障礙服務。</string>
     <string name="about_license_note">程式碼以 MIT 授權條款公開。「volumetap」名稱及應用程式圖示不在 MIT 授權條款的範圍內。</string>
     <string name="no_browser">找不到瀏覽器</string>
 
