@@ -23,9 +23,20 @@
     <string name="consent_agree_open">同意して設定を開く</string>
     <string name="consent_agree">同意する</string>
     <string name="consent_decline">同意しない</string>
+    <string name="a11y_step_select">1. 「volumetap」を選ぶ（見当たらなければ「ダウンロードしたアプリ」や「インストール済みアプリ」の中にあります）</string>
+    <string name="a11y_step_select_samsung">1. 「インストール済みアプリ」を開いて、「volumetap」を選ぶ</string>
+    <string name="a11y_step_turn_on">2. 「volumetap を使用」をオンにして、「許可」を押す</string>
+    <string name="a11y_step_shortcut">3. 「volumetap のショートカット」は、オフのままで大丈夫です（オンにすると、画面の端にボタンが出たままになります）</string>
 
     <string name="power_restriction_title">省電力の設定が必要です</string>
     <string name="power_restriction_body">この端末では、省電力機能が裏で動く volumetap を止めてしまい、ボリュームキーがときどき効かなくなります。\n\n次の 2 つを設定してください。\n・アプリ情報の「電源」で、バッテリーセーバーを「制限なし」にする\n・端末の設定 →「アプリ」→ 画面上部の「バックグラウンドでの自動起動」で、volumetap をオンにする\n\n設定を変えると、ユーザー補助がいったんオフになります。設定が済んだら、ユーザー補助を有効にし直してください。\n\n（メニューの名前は端末によって違います。）</string>
+    <string name="power_intro">この端末では、省電力機能が裏で動く volumetap を止めてしまい、ボリュームキーが効かなくなることがあります。アプリ情報で、次の設定をしてください。</string>
+    <string name="power_item_background">「アプリのバッテリー使用量」→「バックグラウンドでの使用を許可」をオンにする</string>
+    <string name="power_item_samsung_battery">「バッテリー」を「制限なし」にする</string>
+    <string name="power_item_samsung_unused">「使用していない場合アプリを管理」をオフにする</string>
+    <string name="power_menu_note">（メニューの名前は端末によって違います。）</string>
+    <string name="power_item_done">設定済み</string>
+    <string name="power_item_todo">未設定</string>
     <string name="open_app_info">アプリ情報を開く</string>
     <string name="open_app_info_failed">アプリ情報を開けませんでした</string>
     <string name="open_accessibility_settings">設定を開く</string>

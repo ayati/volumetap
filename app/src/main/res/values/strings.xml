@@ -28,10 +28,23 @@
     <string name="consent_agree_open">Agree and open settings</string>
     <string name="consent_agree">Agree</string>
     <string name="consent_decline">Don\'t agree</string>
+    <!-- ユーザー補助を有効にする手順（design.md §6.1.4）。名前は Pixel と Galaxy の設定アプリから写したもの。 -->
+    <string name="a11y_step_select">1. Select “volumetap” (if it isn\'t there, look under “Downloaded apps” or “Installed apps”)</string>
+    <string name="a11y_step_select_samsung">1. Open “Installed apps” and select “volumetap”</string>
+    <string name="a11y_step_turn_on">2. Turn on “Use volumetap”, then tap “Allow”</string>
+    <string name="a11y_step_shortcut">3. You can leave “volumetap shortcut” off (turning it on keeps a button on the edge of the screen)</string>
 
     <string name="power_restriction_title">Battery settings needed</string>
     <!-- 端末の画面の名前は design-i18n.md §6.2.1 で実機から写したもの。 -->
     <string name="power_restriction_body">On this device, power saving stops volumetap in the background, so the volume keys sometimes stop working.\n\nPlease change these two settings:\n• In App info → “Power”, choose “No restrictions”\n• In device Settings → “Apps” → “Background autostart” (at the top), turn on volumetap\n\nChanging these turns accessibility off for a moment. When you are done, turn volumetap back on in Accessibility.\n\n(Menu names may differ by device.)</string>
+    <!-- Xiaomi 以外の端末の省電力の案内（design.md §8.2）。名前は Pixel と Galaxy の設定アプリから写したもの。 -->
+    <string name="power_intro">On this device, power saving can stop volumetap in the background, so the volume keys may stop working. In App info, change the following:</string>
+    <string name="power_item_background">Turn on “App battery usage” → “Allow background usage”</string>
+    <string name="power_item_samsung_battery">Set “Battery” to “Unrestricted”</string>
+    <string name="power_item_samsung_unused">Turn off “Manage app if unused”</string>
+    <string name="power_menu_note">(Menu names may differ by device.)</string>
+    <string name="power_item_done">Done</string>
+    <string name="power_item_todo">Not set</string>
     <string name="open_app_info">Open App info</string>
     <string name="open_app_info_failed">Couldn\'t open App info</string>
     <string name="open_accessibility_settings">Open settings</string>

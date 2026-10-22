@@ -20,10 +20,21 @@
     <string name="consent_agree_open">同意并打开设置</string>
     <string name="consent_agree">同意</string>
     <string name="consent_decline">不同意</string>
+    <string name="a11y_step_select">1. 选择“volumetap”（如果找不到，请在“已下载的应用”或“已安装的应用”中查找）</string>
+    <string name="a11y_step_select_samsung">1. 打开“已安装的应用程序”，选择“volumetap”</string>
+    <string name="a11y_step_turn_on">2. 打开 volumetap 的开关，然后点击“允许”</string>
+    <string name="a11y_step_shortcut">3. “volumetap”快捷方式保持关闭即可（开启后，屏幕边缘会一直显示一个按钮）</string>
 
     <string name="power_restriction_title">需要设置省电策略</string>
     <!-- 端末の画面の名前は design-i18n.md §6.2.1 で実機から写したもの。 -->
     <string name="power_restriction_body">在此设备上，省电功能会停止在后台运行的 volumetap，导致音量键有时失效。\n\n请完成以下两项设置：\n・在应用信息的“省电策略”中，选择“无限制”\n・在设备设置 →“应用设置”→ 页面上方的“后台启动”中，开启 volumetap\n\n更改设置后，无障碍服务会暂时关闭。设置完成后，请重新开启 volumetap 的无障碍服务。\n\n（菜单名称可能因设备而异。）</string>
+    <string name="power_intro">在此设备上，省电功能可能会停止在后台运行的 volumetap，导致音量键失效。请在应用信息中完成以下设置：</string>
+    <string name="power_item_background">开启“应用的电池使用情况”→“允许后台使用”</string>
+    <string name="power_item_samsung_battery">将“电池”设为“不受限制”</string>
+    <string name="power_item_samsung_unused">关闭“管理未使用的应用程序”</string>
+    <string name="power_menu_note">（菜单名称可能因设备而异。）</string>
+    <string name="power_item_done">已设置</string>
+    <string name="power_item_todo">未设置</string>
     <string name="open_app_info">打开应用信息</string>
     <string name="open_app_info_failed">无法打开应用信息</string>
     <string name="open_accessibility_settings">打开设置</string>

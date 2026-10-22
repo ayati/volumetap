@@ -3,9 +3,7 @@ package com.ayati.volumetap.ui
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -66,6 +64,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
@@ -85,7 +85,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val serviceEnabled = mutableStateOf(false)
-    private val powerRestricted = mutableStateOf(false)
+    private val powerGuide = mutableStateOf<PowerGuide?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
                 SettingsScreen(
                     settings = settings,
                     serviceEnabled = serviceEnabled.value,
-                    powerRestricted = powerRestricted.value,
+                    powerGuide = powerGuide.value,
                     accessibilityConsent = consent,
                     onAgreeToAccessibility = { openSettings ->
                         lifecycleScope.launch { repository.setAccessibilityConsent() }
@@ -148,24 +148,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         serviceEnabled.value = isVolumeTapServiceEnabled()
-        powerRestricted.value = isPowerRestricted()
+        powerGuide.value = powerGuide()
     }
 
-    /**
-     * HyperOS / MIUI の省電力機能にサービスを凍結されうる状態か（設計書 §8）。
-     *
-     * Xiaomi 端末は裏に回ったプロセスを数秒で凍結し、そのあいだ音量キーが届かない。
-     * アプリ情報の「バッテリーセーバー：制限なし」で防げる。この設定は Android 標準の
-     * 省電力除外にも反映されるため、[PowerManager.isIgnoringBatteryOptimizations] で判定できる。
-     * 「自動起動」は公開 API で読めないので判定に含めない。
-     */
-    private fun isPowerRestricted(): Boolean {
-        if (!Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) return false
-        val power = getSystemService(PowerManager::class.java) ?: return false
-        return !power.isIgnoringBatteryOptimizations(packageName)
-    }
-
-    /** アプリ情報画面。HyperOS ではここにバッテリーセーバーと自動起動がある。 */
+    /** アプリ情報画面。省電力の設定はどの端末でもここからたどれる（設計書 §8）。 */
     private fun openAppInfo() {
         val intent = Intent(
             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -192,7 +178,7 @@ class MainActivity : ComponentActivity() {
 private fun SettingsScreen(
     settings: AppSettings,
     serviceEnabled: Boolean,
-    powerRestricted: Boolean,
+    powerGuide: PowerGuide?,
     accessibilityConsent: Boolean?,
     onAgreeToAccessibility: (openSettings: Boolean) -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
@@ -289,9 +275,9 @@ private fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // 省電力設定を変えると端末がアプリを強制停止し、ユーザー補助がオフになる。
-            // 「省電力設定 → ユーザー補助」の順に読めるよう、状態カードより上に置く。
-            if (powerRestricted) PowerRestrictionCard(onOpenAppInfo)
+            // Xiaomi では省電力設定を変えると端末がアプリを強制停止し、ユーザー補助がオフになる（§8.1）。
+            // 「省電力設定 → ユーザー補助」の順に読めるよう、どの端末でも状態カードより上に置く。
+            if (powerGuide != null) PowerRestrictionCard(powerGuide, onOpenAppInfo)
             ServiceStatusCard(serviceEnabled) {
                 // 同意の前に設定画面へは送らない（design.md §6.1.3）。
                 // 読み込み前（null）は何もしない。同意済みの人にダイアログを出さないため。
@@ -393,6 +379,7 @@ private fun ServiceStatusCard(enabled: Boolean, onOpen: () -> Unit) {
                     text = stringResource(R.string.service_disabled_body),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                AccessibilitySteps()
             }
             Button(onClick = onOpen) {
                 Text(stringResource(R.string.open_accessibility_settings))
@@ -420,8 +407,9 @@ private fun AccessibilityConsentDialog(opensSettings: Boolean, onAgree: () -> Un
                 if (opensSettings) {
                     Text(
                         text = stringResource(R.string.consent_next),
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
                     )
+                    AccessibilitySteps()
                 }
             }
         },
@@ -569,8 +557,27 @@ private fun ProfileRow(app: InstalledApp?, label: String, profile: AppProfile, o
     }
 }
 
+/**
+ * ユーザー補助の設定画面での手順（design.md §6.1.4）。
+ *
+ * 「ショートカット」もオンにすべきか迷う人が多いので、オフのままでよいことまで書く。
+ * Samsung は一覧の「インストール済みアプリ」の中に volumetap があるので、1 行目を変える。
+ */
 @Composable
-private fun PowerRestrictionCard(onOpen: () -> Unit) {
+private fun AccessibilitySteps() {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        for (step in listOf(
+            if (isSamsung) R.string.a11y_step_select_samsung else R.string.a11y_step_select,
+            R.string.a11y_step_turn_on,
+            R.string.a11y_step_shortcut,
+        )) {
+            Text(text = stringResource(step), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+private fun PowerRestrictionCard(guide: PowerGuide, onOpen: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -586,14 +593,48 @@ private fun PowerRestrictionCard(onOpen: () -> Unit) {
                 text = stringResource(R.string.power_restriction_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            Text(
-                text = stringResource(R.string.power_restriction_body),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            when (guide) {
+                PowerGuide.Xiaomi -> Text(
+                    text = stringResource(R.string.power_restriction_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                is PowerGuide.Checklist -> {
+                    Text(
+                        text = stringResource(R.string.power_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    for ((item, done) in guide.items) PowerItemRow(item, done)
+                    Text(
+                        text = stringResource(R.string.power_menu_note),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
             Button(onClick = onOpen) {
                 Text(stringResource(R.string.open_app_info))
             }
         }
+    }
+}
+
+/** 済んだ項目には印を付け、読み上げでも「設定済み・未設定」が伝わるようにする。 */
+@Composable
+private fun PowerItemRow(item: PowerItem, done: Boolean) {
+    val state = stringResource(if (done) R.string.power_item_done else R.string.power_item_todo)
+    Row(
+        modifier = Modifier.semantics(mergeDescendants = true) { stateDescription = state },
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = if (done) "✓" else "・",
+            style = MaterialTheme.typography.bodyMedium,
+            // ✓ と ・ で幅が違うと、項目の文字の頭がそろわない。
+            modifier = Modifier.width(20.dp).clearAndSetSemantics {},
+        )
+        Text(
+            text = stringResource(item.label),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
