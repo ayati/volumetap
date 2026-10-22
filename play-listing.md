@@ -54,12 +54,12 @@ Power saving may stop volumetap in the background. The app shows which settings 
 The developer's first language is Japanese, and the English and Chinese text includes machine translation. Corrections and suggestions for more natural wording are welcome. Please let us know through GitHub Issues (https://github.com/ayati/volumetap/issues) or by email, with the screen and the wording you would suggest.
 ```
 
-### リリースノート（v0.17.0）
+### リリースノート（v0.18.0）
 
 ```
-volumetap 0.17.0
-• On first launch, the app now explains what it uses the Accessibility service for and asks for your consent.
-• The same explanation is always available under About → Accessibility and privacy.
+volumetap 0.18.0
+• The app now shows, step by step, what to do on the Accessibility settings screen. You can leave the "volumetap shortcut" off.
+• On Pixel, Samsung and other devices, the app now points out battery settings that can stop the volume keys from working, and marks each one when done.
 • No new permissions. volumetap still does not read the screen and has no internet access.
 ```
 
@@ -100,12 +100,12 @@ volumetap 适用于触摸屏幕有困难的情况：短按音量键，即可逐�
 开发者的母语是日语，中文文本包含机器翻译。欢迎指出错误或不自然的表达。请通过 GitHub Issues（https://github.com/ayati/volumetap/issues）或电子邮件告诉我们，并注明对应的页面和您建议的表达。
 ```
 
-### リリースノート（v0.17.0）
+### リリースノート（v0.18.0）
 
 ```
-volumetap 0.17.0
-• 首次启动时，会说明无障碍服务的用途并请求同意。
-• 同样的说明随时可在“关于本应用”→“无障碍与隐私”中查看。
+volumetap 0.18.0
+• 现在会逐步说明在无障碍设置页面中需要做什么。“volumetap”快捷方式保持关闭即可。
+• 在 Pixel、三星等设备上，如果有可能导致音量键失效的电池设置，应用会提示，并在完成后打上勾。
 • 未新增任何权限。volumetap 仍不会读取屏幕内容，也不联网。
 ```
 
@@ -146,21 +146,21 @@ volumetap 適用於觸碰螢幕有困難的情況：短按音量鍵，即可逐�
 開發者的母語是日語，中文文字包含機器翻譯。歡迎指出錯誤或不自然的表達。請透過 GitHub Issues（https://github.com/ayati/volumetap/issues）或電子郵件告訴我們，並註明對應的畫面和您建議的表達。
 ```
 
-### リリースノート（v0.17.0）
+### リリースノート（v0.18.0）
 
 ```
-volumetap 0.17.0
-• 首次啟動時，會說明無障礙服務的用途並請求同意。
-• 同樣的說明隨時可在「關於本應用程式」→「無障礙與隱私權」中查看。
+volumetap 0.18.0
+• 現在會逐步說明在無障礙設定畫面中需要做什麼。「volumetap」捷徑保持關閉即可。
+• 在 Pixel、三星等裝置上，如果有可能導致音量鍵失效的電池設定，應用程式會提示，並在完成後打勾。
 • 未新增任何權限。volumetap 仍不會讀取螢幕內容，也不連網。
 ```
 
 ---
 
-## 日本語（ja-JP）のリリースノート（v0.17.0）
+## 日本語（ja-JP）のリリースノート（v0.18.0）
 
 ```
-初回の起動時に、ユーザー補助を何に使うかを示して同意を求めるようにしました。
-・同じ説明は「このアプリについて」→「ユーザー補助とプライバシー」でいつでも読めます。
+ユーザー補助の設定画面で何をすればよいかを、手順で示すようにしました。「volumetap のショートカット」はオフのままで構いません。
+・Pixel・Galaxy などで、音量キーが効かなくなる省電力の設定が残っているときに案内を出し、済んだ項目に ✓ を付けます。
 ・権限は増えていません。画面の内容は読み取らず、インターネットにも接続しません。
 ```
