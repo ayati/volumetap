@@ -206,7 +206,9 @@ Chrome とは別の割り当てにできます。yomikake を追加していな�
 ./gradlew installDebug             # 実機へインストール
 ```
 
-必要なもの: JDK 17〜21（JDK 25 では Gradle が起動しない）、Android SDK（platform 36 / build-tools 36.0.0）。
+必要なもの: JDK 17〜21（JDK 25 では Gradle が起動しない）、Android SDK（platform 36 / build-tools 36.0.0）、
+リリースビルドには NDK 27.0.12077973 も（無くてもビルドは通るが、AAB にネイティブのデバッグシンボルが入らず、
+Play で警告が出る）。
 
 `keystore.properties` が無い環境でもビルドは通ります（リリースは未署名 APK になります）。
 
