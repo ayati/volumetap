@@ -54,13 +54,13 @@ Power saving may stop volumetap in the background. The app shows which settings 
 The developer's first language is Japanese, and the English and Chinese text includes machine translation. Corrections and suggestions for more natural wording are welcome. Please let us know through GitHub Issues (https://github.com/ayati/volumetap/issues) or by email, with the screen and the wording you would suggest.
 ```
 
-### リリースノート（v0.16.0）
+### リリースノート（v0.17.0）
 
 ```
-volumetap 0.16.0
-• Swap volume up and down for short presses, for phones where the keys feel the wrong way round in your grip. Long press still changes the volume as labeled.
-• Optional: press both volume keys at once to pause or resume without opening Quick Settings. Two short vibrations mean paused, one long vibration means resumed. Off by default.
-• Select all, deselect all or invert the selection from the ⋮ menu when adding apps.
+volumetap 0.17.0
+• On first launch, the app now explains what it uses the Accessibility service for and asks for your consent.
+• The same explanation is always available under About → Accessibility and privacy.
+• No new permissions. volumetap still does not read the screen and has no internet access.
 ```
 
 ---
@@ -100,13 +100,13 @@ volumetap 适用于触摸屏幕有困难的情况：短按音量键，即可逐�
 开发者的母语是日语，中文文本包含机器翻译。欢迎指出错误或不自然的表达。请通过 GitHub Issues（https://github.com/ayati/volumetap/issues）或电子邮件告诉我们，并注明对应的页面和您建议的表达。
 ```
 
-### リリースノート（v0.16.0）
+### リリースノート（v0.17.0）
 
 ```
-volumetap 0.16.0
-• 可以互换音量上下键的短按设置，适用于握持时按键位置感觉相反的手机。长按调节音量仍按键上的标示进行。
-• 可选：同时按下音量上下键，无需打开快捷设置即可暂停或恢复。短振动两次表示已暂停，长振动一次表示已恢复。默认关闭。
-• 添加应用时，可以从 ⋮ 菜单全选、取消全选或反选。
+volumetap 0.17.0
+• 首次启动时，会说明无障碍服务的用途并请求同意。
+• 同样的说明随时可在“关于本应用”→“无障碍与隐私”中查看。
+• 未新增任何权限。volumetap 仍不会读取屏幕内容，也不联网。
 ```
 
 ---
@@ -146,21 +146,21 @@ volumetap 適用於觸碰螢幕有困難的情況：短按音量鍵，即可逐�
 開發者的母語是日語，中文文字包含機器翻譯。歡迎指出錯誤或不自然的表達。請透過 GitHub Issues（https://github.com/ayati/volumetap/issues）或電子郵件告訴我們，並註明對應的畫面和您建議的表達。
 ```
 
-### リリースノート（v0.16.0）
+### リリースノート（v0.17.0）
 
 ```
-volumetap 0.16.0
-• 可以互換音量上下鍵的短按設定，適合握持時按鍵位置感覺相反的手機。長按調整音量仍依按鍵上的標示。
-• 可選：同時按下音量上下鍵，不必開啟快速設定就能暫停或繼續。短震動兩次表示已暫停，長震動一次表示已繼續。預設為關閉。
-• 新增應用程式時，可以從 ⋮ 選單全選、取消全選或反向選取。
+volumetap 0.17.0
+• 首次啟動時，會說明無障礙服務的用途並請求同意。
+• 同樣的說明隨時可在「關於本應用程式」→「無障礙與隱私權」中查看。
+• 未新增任何權限。volumetap 仍不會讀取螢幕內容，也不連網。
 ```
 
 ---
 
-## 日本語（ja-JP）のリリースノート（v0.16.0）
+## 日本語（ja-JP）のリリースノート（v0.17.0）
 
 ```
-音量キーの上下を入れ替えられるようになりました（短押しのみ。長押しの音量調整はキーの表示どおり）。
-・音量＋と−の同時押しで、一時停止・再開を切り替えられます（設定でオン。一時停止は短く 2 回、再開は長く 1 回振動）。
-・「アプリを追加」の「⋮」から、すべて選択・選択をすべて解除・選択を反転ができます。
+初回の起動時に、ユーザー補助を何に使うかを示して同意を求めるようにしました。
+・同じ説明は「このアプリについて」→「ユーザー補助とプライバシー」でいつでも読めます。
+・権限は増えていません。画面の内容は読み取らず、インターネットにも接続しません。
 ```
